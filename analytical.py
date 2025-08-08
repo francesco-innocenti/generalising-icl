@@ -7,12 +7,7 @@ Array: TypeAlias = jnp.ndarray
 
 
 @eqx.filter_jit
-def compute_ΔW(
-        model: eqx.Module, 
-        input_prompt: Array, 
-        input_query: Array, 
-        output_idx: int = -1
-    ):
+def compute_ΔW(model: eqx.Module, C_x: Array, x: Array, output_idx: int = -1):
     """Computes ΔW according to 
         
         ΔW(C)[i] = (W * ΔA[i]) * A(x)[i]^T / ||A(x)[i]||²
@@ -23,8 +18,8 @@ def compute_ΔW(
 
     Args:
         model: equinox model.
-        input_prompt: input with context and query.
-        input_query: input with only query (and no context).
+        C_x: input with context and query.
+        x: input with only query (and no context).
         output_idx: output token index for which to compute ΔW.
 
     Returns:   
@@ -32,11 +27,11 @@ def compute_ΔW(
 
     """
     # A(C, x): attention output with full context
-    attn_full = model.attention_layer(input_prompt)  # (B, N+1, D)
+    attn_full = model.attention_layer(C_x)  # (B, N+1, D)
     A_C_x = attn_full[:, output_idx, :]  # (B, D)
 
     # A(x): attention output with query only (no context)
-    attn_query_only = model.attention_layer(input_query)  # (B, 1, D)
+    attn_query_only = model.attention_layer(x)  # (B, 1, D)
     A_x = attn_query_only[:, output_idx, :]  # (B, D)
 
     # ΔA = A(C,x) - A(x)

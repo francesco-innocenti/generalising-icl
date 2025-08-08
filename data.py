@@ -1,4 +1,3 @@
-import jax
 import jax.numpy as jnp
 import jax.random as jr
 from typing import Tuple, TypeAlias
@@ -21,40 +20,40 @@ def generate_linear_tasks(
         key: random key for sampling.
 
     Returns:   
-        (B, N, D) context inputs and (B,) target outputs.
+        Context inputs (B, N, D) and target outputs (B,).
         
     """
     B, N, D = n_tasks, seq_len, dim
     keys = jr.split(key, 3)
 
     W = jr.normal(keys[0], (B, D))               # one weight vector per task/batch (B, D)
-    X = jr.normal(keys[1], (B, N, D))            # context inputs  (B, N, D)
-    y = jnp.einsum('bd,bnd->bn', W, X)           # context outputs (B, N)
+    x = jr.normal(keys[1], (B, N, D))            # context inputs  (B, N, D)
+    y = jnp.einsum('bd,bnd->bn', W, x)           # context outputs (B, N)
 
     x_query = jr.normal(keys[2], (B, D))         # query input (B, D)
     y_query = jnp.einsum('bd,bd->b', W, x_query) # query output (B,)
 
     return (
-        create_input_matrix(X, y, x_query), 
+        create_input_matrix(x, y, x_query), 
         y_query
     )
 
 
-def create_input_matrix(X: Array, y: Array, x_query: Array) -> Array:
+def create_input_matrix(x: Array, y: Array, x_query: Array) -> Array:
     """Creates the input matrix E_τ as described in https://arxiv.org/abs/2507.16003.
 
     Args:
-        X: (B, N, D) - context inputs.
-        y: (B, N) - context outputs.
-        x_query: (B, D) - query input.
+        x: context inputs (B, N, D).
+        y: context outputs (B, N).
+        x_query: query input (B, D).
 
     Returns: 
-        (B, N+1, D+1) input matrix.
+        Input matrix (B, N+1, D+1).
 
     """
-    B = X.shape[0]
+    B = x.shape[0]
 
-    context = jnp.concatenate([X, y[..., None]], axis=-1)  # (B, N, D+1)
+    context = jnp.concatenate([x, y[..., None]], axis=-1)  # (B, N, D+1)
     query = jnp.concatenate([
         x_query[:, None, :],        # (B, 1, D)
         jnp.zeros((B, 1, 1))        # (B, 1, 1) - placeholder for output
