@@ -5,13 +5,12 @@ from typing import TypeAlias
 
 import equinox as eqx
 import equinox.nn as nn
+from utils import check_input_dim
 
 Array: TypeAlias = jnp.ndarray
 
 
-class OneBlockTransformer(eqx.Module):
-    """One-block transformer model."""
-
+class TransformerBlock(eqx.Module):
     attn: nn.MultiheadAttention
     mlp: nn.MLP
     norm1: nn.LayerNorm
@@ -58,8 +57,41 @@ class OneBlockTransformer(eqx.Module):
             x = jax.vmap(jax.vmap(self.norm2))(x)
 
         x = jax.vmap(jax.vmap(self.mlp))(x)
-        return x[:, idx, -1]
+        return x
 
+
+class Transformer(eqx.Module):
+    blocks: list
+    n_blocks: int
+
+    def __init__(
+        self,
+        n_embed: int,
+        n_heads: int,
+        n_blocks: int,
+        *,
+        key: jr.PRNGKey,
+        use_layer_norm: bool = False,
+    ):
+        keys = jax.random.split(key, n_blocks)
+        self.blocks = [
+            TransformerBlock(
+                n_embed=n_embed,
+                n_heads=n_heads,
+                key=k,
+                use_layer_norm=use_layer_norm,
+            )
+            for k in keys
+        ]
+        self.n_blocks = n_blocks
+
+    def __call__(self, x: Array, *, all_idxs: bool = False) -> Array:        
+        for block in self.blocks:
+            x = block(x)
+        
+        return x[:, :, -1] if all_idxs else x[:, -1, -1]
+    
+    
 
 @eqx.filter_value_and_grad
 def loss_fn(model, x, y):
