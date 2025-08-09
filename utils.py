@@ -8,7 +8,7 @@ def set_seed(seed):
     random.seed(seed)
 
 
-def setup_experiment(
+def get_save_dir(
         save_dir,
         n_tasks,
         seq_len,
@@ -19,24 +19,27 @@ def setup_experiment(
         use_layer_norm,
         n_steps,
         param_lr,
-        seed
+        seed,
+        print_config=True
 ):
-    print(
-        f"""
-Starting experiment with config:
+    if print_config:
+        print(
+            f"""
+    Starting experiment with config:
 
-  N tasks: {n_tasks}
-  Sequence length: {seq_len}
-  Input dim: {input_dim}
-  N embed: {n_embed}
-  N heads: {n_heads}
-  N blocks: {n_blocks}
-  Use layer norm: {use_layer_norm}
-  Training steps: {n_steps}
-  Param lr: {param_lr}
-  Seed: {seed}
-"""
-    )
+    N tasks: {n_tasks}
+    Sequence length: {seq_len}
+    Input dim: {input_dim}
+    N embed: {n_embed}
+    N heads: {n_heads}
+    N blocks: {n_blocks}
+    Use layer norm: {use_layer_norm}
+    Training steps: {n_steps}
+    Param lr: {param_lr}
+    Seed: {seed}
+    """
+        )
+
     save_dir = os.path.join(
         save_dir,
         f"{n_tasks}_tasks",

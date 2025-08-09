@@ -7,7 +7,7 @@ import jax.numpy as jnp
 import equinox as eqx
 import optax
 
-from utils import set_seed, setup_experiment
+from utils import set_seed, get_save_dir
 from data import generate_linear_tasks
 from model import Transformer, apply_mlp_weight_update, train_step
 from analytical import compute_ΔW
@@ -87,7 +87,7 @@ def main(
         train_losses.append(train_loss)
         test_losses.append(test_loss)
         theory_test_losses.append(theory_test_loss)
-        preds_diffs.append(sum(preds - theory_preds))
+        preds_diffs.append((preds - theory_preds).sum())
 
         if t % 100 == 0:
             print(f"Step {t} | Loss: {train_loss:.4f}")
@@ -113,6 +113,6 @@ if __name__ == "__main__":
     parser.add_argument('--param_lr', type=float, default=5e-3)
     args = parser.parse_args()
 
-    save_dir = setup_experiment(**vars(args))
+    save_dir = get_save_dir(**vars(args))
     args.save_dir = save_dir
     main(**vars(args))
