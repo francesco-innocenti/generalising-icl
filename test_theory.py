@@ -1,20 +1,21 @@
+import copy
+import argparse
 import numpy as np
+
 import jax.random as jr
 import jax.numpy as jnp
 import equinox as eqx
 import optax
 
-import copy
-import argparse
 from utils import set_seed, setup_experiment
 from data import generate_linear_tasks
-from model import Transformer, apply_weight_update
+from model import Transformer, apply_mlp_weight_update, train_step
 from analytical import compute_ΔW
 
 
 def main(
         seed: jr.PRNGKey,
-        batch_size: int,
+        n_tasks: int,
         seq_len: int,
         input_dim: int,
         n_embed: int,
@@ -32,13 +33,13 @@ def main(
     # data
     train_key, test_key = jr.split(data_key, 2)
     C_x_train, y_train = generate_linear_tasks(
-        batch_size=batch_size,
+        n_tasks=n_tasks,
         seq_len=seq_len,
         dim=input_dim,
         key=train_key
     )
     C_x_test, y_test = generate_linear_tasks(
-        batch_size=batch_size,
+        n_tasks=n_tasks,
         seq_len=seq_len,
         dim=input_dim,
         key=test_key
@@ -66,14 +67,17 @@ def main(
         test_loss = 0.5 * jnp.mean((y_test - preds[:, -1]) ** 2)
 
         # ΔW model
-        model_copy = copy.deepcopy(model)
-        ΔW = compute_ΔW(model=model_copy, C_x=C_x_test, x=x_test)
-        model_updated = apply_weight_update(model_copy, ΔW)
-        theory_preds = model_updated(x_test, all_idxs=True)
+        model_copies = [copy.deepcopy(model) for _ in range(seq_len+1)]
+        ΔWs = compute_ΔW(model=model_copies[0], C_x=C_x_test, x=x_test)
+        theory_preds = np.zeros((n_tasks, seq_len+1))
+        for i in range(seq_len+1):
+            model_copies[i] = apply_mlp_weight_update(model_copies[i], ΔWs[i])
+            theory_preds[:, i] = model_copies[i](x_test)
+        
         theory_test_loss = 0.5 * jnp.mean((y_test - theory_preds[:, -1]) ** 2)
         
         # train
-        model, opt_state, train_loss = model.train_step(
+        model, opt_state, train_loss = train_step(
             model,
             opt_state,
             C_x_train,
@@ -98,14 +102,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', type=str, default="results")
     parser.add_argument('--seed', type=int, default=53093)
-    parser.add_argument('--batch_size', type=int, default=1)
+    parser.add_argument('--n_tasks', type=int, default=1)
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_embed', type=int, default=3)
     parser.add_argument('--n_heads', type=int, default=1)
     parser.add_argument('--n_blocks', type=int, default=1)
     parser.add_argument('--use_layer_norm', action="store_true")  # false by default
-    parser.add_argument('--n_steps', type=int, default=1000)
+    parser.add_argument('--n_steps', type=int, default=500)
     parser.add_argument('--param_lr', type=float, default=5e-3)
     args = parser.parse_args()
 
