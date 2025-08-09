@@ -10,7 +10,7 @@ def set_seed(seed):
 
 def setup_experiment(
         save_dir,
-        batch_size,
+        n_tasks,
         seq_len,
         input_dim,
         n_embed,
@@ -25,7 +25,7 @@ def setup_experiment(
         f"""
 Starting experiment with config:
 
-  Batch size: {batch_size}
+  N tasks: {n_tasks}
   Sequence length: {seq_len}
   Input dim: {input_dim}
   N embed: {n_embed}
@@ -39,7 +39,7 @@ Starting experiment with config:
     )
     save_dir = os.path.join(
         save_dir,
-        f"batch_size_{batch_size}",
+        f"{n_tasks}_tasks",
         f"seq_len_{seq_len}",
         f"input_dim_{input_dim}",
         f"n_embed_{n_embed}",
