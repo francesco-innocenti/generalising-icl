@@ -5,7 +5,6 @@ from typing import TypeAlias
 
 import equinox as eqx
 import equinox.nn as nn
-from utils import check_input_dim
 
 Array: TypeAlias = jnp.ndarray
 
@@ -107,9 +106,9 @@ def train_step(model, opt_state, x, y, optim):
     return model, opt_state, loss
 
 
-def apply_weight_update(model, ΔW):
+def apply_mlp_weight_update(model, ΔW, block_idx=0):
     return eqx.tree_at(
-        lambda m: m.mlp.layers[0].weight,
+        lambda m: m.blocks[block_idx].mlp.layers[0].weight,
         model,
-        model.mlp.layers[0].weight + ΔW
+        model.blocks[block_idx].mlp.layers[0].weight + ΔW
     )
