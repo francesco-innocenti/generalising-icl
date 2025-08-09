@@ -35,7 +35,7 @@ def compute_ΔW(model: eqx.Module, C_x: Array, x: Array):
     A_x = jnp.broadcast_to(A_x, A_C_x.shape)
 
     # ΔA = A(C,x) - A(x) → (B, N, D)
-    ΔA = A_C_x - A_x  # (B, D)
+    ΔA = A_C_x - A_x
 
     # Get the weight matrix W from first MLP layer → (hidden_dim, D)
     W = model.mlp.layers[0].weight
