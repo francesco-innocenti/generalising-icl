@@ -7,7 +7,7 @@ Array: TypeAlias = jnp.ndarray
 
 
 @eqx.filter_jit
-def compute_ΔW(model: eqx.Module, C_x: Array, x: Array):
+def compute_ΔW(model: eqx.Module, C_x: Array, x: Array, block_idx: int = 0):
     """Computes ΔW according to 
         
         ΔW(C) = (W * ΔA) * A(x)^T / ||A(x)||²
@@ -20,16 +20,17 @@ def compute_ΔW(model: eqx.Module, C_x: Array, x: Array):
         model: equinox model.
         C_x: input with context and query (B, N+1, D).
         x: input with only query (and no context) (B, 1, D).
+        block_idx: transformer block index for which to compute ΔW.
 
     Returns:   
         ΔW for all output tokens (N hidden_dim, D).
 
     """
     # A(C, x): attention output with full context → (B, N+1, D)
-    A_C_x = model.attention_layer(C_x)
+    A_C_x = model.blocks[block_idx].attention_layer(C_x)
 
     # A(x): attention output with query only (no context) → (B, 1, D)
-    A_x = model.attention_layer(x)
+    A_x = model.blocks[block_idx].attention_layer(x)
 
     # broadcast A_x to match sequence length N of A_C_x → (B, N+1, D)
     A_x = jnp.broadcast_to(A_x, A_C_x.shape)
@@ -38,7 +39,7 @@ def compute_ΔW(model: eqx.Module, C_x: Array, x: Array):
     ΔA = A_C_x - A_x
 
     # Get the weight matrix W from first MLP layer → (hidden_dim, D)
-    W = model.mlp.layers[0].weight
+    W = model.blocks[block_idx].mlp.layers[0].weight
 
     def compute_single_ΔW(ΔA_i, A_x_i):
         """ΔA_i: (N, D,), A_x_i: (N, D,) → ΔW_i: (N, hidden_dim, D)"""
