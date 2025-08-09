@@ -7,7 +7,7 @@ import optax
 import copy
 import argparse
 from utils import set_seed, setup_experiment
-from data import generate_linear_data
+from data import generate_linear_tasks
 from model import Transformer, apply_weight_update
 from analytical import compute_ΔW
 
@@ -31,13 +31,13 @@ def main(
 
     # data
     train_key, test_key = jr.split(data_key, 2)
-    C_x_train, y_train = generate_linear_data(
+    C_x_train, y_train = generate_linear_tasks(
         batch_size=batch_size,
         seq_len=seq_len,
         dim=input_dim,
         key=train_key
     )
-    C_x_test, y_test = generate_linear_data(
+    C_x_test, y_test = generate_linear_tasks(
         batch_size=batch_size,
         seq_len=seq_len,
         dim=input_dim,
