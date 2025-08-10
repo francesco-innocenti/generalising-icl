@@ -84,14 +84,17 @@ class Transformer(eqx.Module):
         ]
         self.n_blocks = n_blocks
 
-    def __call__(self, x: Array, *, all_idxs: bool = False) -> Array:        
+    def __call__(self, x, return_activations=False):        
+        activations = [] if return_activations else None
         for block in self.blocks:
             x = block(x)
+            if return_activations:
+                activations.append(x)
         
-        return x[:, :, -1] if all_idxs else x[:, -1, -1]
+        out = x[:, -1, -1]
+        return (out, activations) if return_activations else out
     
     
-
 @eqx.filter_value_and_grad
 def loss_fn(model, x, y):
     pred = model(x)
