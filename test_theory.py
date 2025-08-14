@@ -11,7 +11,7 @@ from utils import set_seed, get_save_dir, compute_ΔWs_alignment
 from data import generate_linear_tasks
 from model import Transformer, apply_icl_updates, train_step
 from analytical import compute_icl_updates
-from plotting import plot_ΔWs_alignments
+from plotting import plot_empirical_vs_theory_losses, plot_ΔWs_alignments
 
 
 def main(
@@ -131,6 +131,13 @@ def main(
     np.save(f"{save_dir}/preds_diffs.npy", preds_diffs)
     np.save(f"{save_dir}/ΔWs_steps.npy", ΔWs_steps)
     
+    if block_idx_to_verify+1 == n_blocks:
+        plot_empirical_vs_theory_losses(
+            test_losses,
+            theory_test_losses,
+            f"{save_dir}/test_losses.pdf"
+        )
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -145,7 +152,7 @@ if __name__ == "__main__":
     parser.add_argument('--block_idx_to_verify', type=int, default=0)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
-    parser.add_argument('--n_steps', type=int, default=3)
+    parser.add_argument('--n_steps', type=int, default=200)
     parser.add_argument('--param_lr', type=float, default=5e-3)
     args = parser.parse_args()
     
