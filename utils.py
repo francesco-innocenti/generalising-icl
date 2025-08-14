@@ -16,8 +16,9 @@ def get_save_dir(
         n_embed,
         n_heads,
         n_blocks,
-        block_idx,
-        use_layer_norm,
+        block_idx_to_verify,
+        use_skips,
+        hidden_multiplier,
         n_steps,
         param_lr,
         seed,
@@ -34,8 +35,9 @@ def get_save_dir(
     N embed: {n_embed}
     N heads: {n_heads}
     N blocks: {n_blocks}
-    Block idx: {block_idx}
-    Use layer norm: {use_layer_norm}
+    Block idx to verify: {block_idx_to_verify}
+    Use skips: {use_skips}
+    Hidden multiplier: {hidden_multiplier}
     Training steps: {n_steps}
     Param lr: {param_lr}
     Seed: {seed}
@@ -50,8 +52,9 @@ def get_save_dir(
         f"n_embed_{n_embed}",
         f"{n_heads}_heads",
         f"{n_blocks}_blocks",
-        f"block_idx_{block_idx}",
-        f"layer_norm" if use_layer_norm else "no_layer_norm",
+        f"block_idx_to_verify_{block_idx_to_verify}",
+        "skips" if use_skips else "no_skips",
+        f"hidden_multiplier_{hidden_multiplier}",
         f"{n_steps}_steps",
         f"param_lr_{param_lr}",
         str(seed)
