@@ -12,17 +12,20 @@ Array: TypeAlias = jnp.ndarray
 class TransformerBlock(eqx.Module):
     attn: nn.MultiheadAttention
     mlp: nn.MLP
-    norm1: nn.LayerNorm
-    norm2: nn.LayerNorm
+    norm_attn: nn.LayerNorm
+    norm_mlp: nn.LayerNorm
     use_layer_norm: bool
+    use_skips: bool
 
     def __init__(
             self,
             n_embed: int, 
             n_heads: int, 
             *, 
-            key: jr.PRNGKey, 
-            use_layer_norm: bool = False
+            key: jr.PRNGKey,
+            use_skips: bool = False,
+            use_layer_norm: bool = False,
+            hidden_multiplier: int = 4
         ):
         k1, k2 = jax.random.split(key, 2)
         self.attn = nn.MultiheadAttention(
@@ -33,30 +36,38 @@ class TransformerBlock(eqx.Module):
         self.mlp = nn.MLP(
             in_size=n_embed,
             out_size=n_embed,
-            width_size=4*n_embed,
+            width_size=hidden_multiplier * n_embed,
             depth=2,
             activation=jax.nn.gelu,
             key=k2,
         )
+        self.norm_attn = nn.LayerNorm(n_embed)
+        self.norm_mlp = nn.LayerNorm(n_embed)
         self.use_layer_norm = use_layer_norm
-        self.norm1 = nn.LayerNorm(n_embed)
-        self.norm2 = nn.LayerNorm(n_embed)
+        self.use_skips = use_skips
 
     def attention_layer(self, x):
         if self.use_layer_norm:
-            x = jax.vmap(jax.vmap(self.norm1))(x)
+            x = jax.vmap(jax.vmap(self.norm_attn))(x)
         return jax.vmap(self.attn)(x, x, x)
 
-    def __call__(self, x, *, idx=-1):
+    def mlp_layer(self, x):
+        if self.use_layer_norm:
+            x = jax.vmap(jax.vmap(self.norm_mlp))(x)
+        return jax.vmap(jax.vmap(self.mlp))(x)
+
+    def __call__(self, x):
         assert x.ndim == 3, (
             f"Expected input shape (batch, seq_len, dim), got {x.shape}."
         )
-        x = self.attention_layer(x)
-        if self.use_layer_norm:
-            x = jax.vmap(jax.vmap(self.norm2))(x)
+        if self.use_skips:
+            attn_out = x + self.attention_layer(x)
+            mlp_out = attn_out + self.mlp_layer(attn_out)
+        else:
+            attn_out = self.attention_layer(x)
+            mlp_out = self.mlp_layer(attn_out)
 
-        x = jax.vmap(jax.vmap(self.mlp))(x)
-        return x
+        return mlp_out
 
 
 class Transformer(eqx.Module):
@@ -70,15 +81,19 @@ class Transformer(eqx.Module):
         n_blocks: int,
         *,
         key: jr.PRNGKey,
+        use_skips: bool = False,
         use_layer_norm: bool = False,
+        hidden_multiplier: int = 4
     ):
         keys = jax.random.split(key, n_blocks)
         self.blocks = [
             TransformerBlock(
-                n_embed=n_embed,
-                n_heads=n_heads,
+                n_embed=n_embed, 
+                n_heads=n_heads, 
                 key=k,
+                use_skips=use_skips,
                 use_layer_norm=use_layer_norm,
+                hidden_multiplier=hidden_multiplier
             )
             for k in keys
         ]
@@ -109,9 +124,25 @@ def train_step(model, opt_state, x, y, optim):
     return model, opt_state, loss
 
 
-def apply_mlp_weight_update(model, ΔW, block_idx=0):
-    return eqx.tree_at(
-        lambda m: m.blocks[block_idx].mlp.layers[0].weight,
+def apply_icl_updates(model, ΔW, Δb, block_idx=0):
+    """
+    Applies the rank-1 weight update ΔW and the bias update Δb' to a model.
+    """
+    weight_path = lambda m: m.blocks[block_idx].mlp.layers[0].weight
+    bias_path = lambda m: m.blocks[block_idx].mlp.layers[-1].bias
+    
+    W = weight_path(model)
+    b = bias_path(model)
+
+    assert W.shape == ΔW.shape, f"ΔW shape {ΔW.shape} != W shape {W.shape}"
+    assert b.shape == Δb.shape, f"Δb shape {Δb.shape} != b shape {b.shape}"
+
+    def where_fn(m):
+        return (weight_path(m), bias_path(m))
+    
+    model = eqx.tree_at(
+        where_fn,
         model,
-        model.blocks[block_idx].mlp.layers[0].weight + ΔW
+        (W + ΔW, b + Δb)
     )
+    return model
