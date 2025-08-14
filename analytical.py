@@ -7,12 +7,18 @@ Array: TypeAlias = jnp.ndarray
 
 
 @eqx.filter_jit
-def compute_ΔW(model: eqx.Module, C_x: Array, x: Array, block_idx: int = 0):
-    """Computes ΔW according to 
+def compute_icl_updates(
+        model: eqx.Module, 
+        C_x: Array, 
+        x: Array, 
+        block_idx: int = 0,
+        use_skips: bool = False
+    ):
+    """Computes in-context learning updates according to 
         
         ΔW(C) = (W * ΔA) * A(x)^T / ||A(x)||²
     
-    where ΔA = A(C, x) - A(x). Note that this is a slight generalisation of 
+    where ΔA = A(C, x) - A(x). Note that this is a generalisation of 
     Equation 8 in https://arxiv.org/abs/2507.16003 for all output tokens, not 
     just the last.
 
@@ -20,39 +26,46 @@ def compute_ΔW(model: eqx.Module, C_x: Array, x: Array, block_idx: int = 0):
         model: equinox model.
         C_x: input with context and query (B, N+1, D).
         x: input with only query (and no context) (B, 1, D).
-        block_idx: transformer block index for which to compute ΔW.
+        block_idx: transformer block index for which to compute updates.
+        use_skips: whether to assume residual or skip connections.
 
     Returns:   
-        ΔW for all output tokens (N hidden_dim, D).
+        ΔW and Δb for all batches and token positions (N hidden_dim, D).
 
     """
     # A(C, x): attention output with full context → (B, N+1, D)
     A_C_x = model.blocks[block_idx].attention_layer(C_x)
-
+    
     # A(x): attention output with query only (no context) → (B, 1, D)
     A_x = model.blocks[block_idx].attention_layer(x)
-
+    
     # broadcast A_x to match sequence length N of A_C_x → (B, N+1, D)
-    A_x = jnp.broadcast_to(A_x, A_C_x.shape)
+    A_x_broadcasted = jnp.broadcast_to(A_x, A_C_x.shape)
 
-    # ΔA = A(C,x) - A(x) → (B, N, D)
-    ΔA = A_C_x - A_x
+    # ΔA = A(C,x) - A(x) → (B, N+1, D)
+    ΔA = A_C_x - A_x_broadcasted
+
+    # Δz = (C,x) - x → (B, N+1, D)
+    Δz = C_x - x if use_skips else jnp.zeros_like(ΔA)
 
     # Get the weight matrix W from first MLP layer → (hidden_dim, D)
     W = model.blocks[block_idx].mlp.layers[0].weight
 
-    def compute_single_ΔW(ΔA_i, A_x_i):
-        """ΔA_i: (N, D,), A_x_i: (N, D,) → ΔW_i: (N, hidden_dim, D)"""
-        W_ΔA = W @ ΔA_i  # (hidden_dim,)
+    def compute_single_ΔW(ΔA_i, A_x_i, Δz_i):
+        """Computes updates for a single batch and token position i."""
+        W_ΔA = W @ (ΔA_i + Δz_i) # (hidden_dim,)
         numerator = W_ΔA[:, None] @ A_x_i[None, :]  # (hidden_dim, D)
         denominator = jnp.linalg.norm(A_x_i) ** 2
-        return numerator / denominator
+        ΔW_i = numerator / (denominator + 1e-8)
+        return ΔW_i
 
-    # vmap over sequence positions and batch
     compute_over_seq = jax.vmap(jax.vmap(compute_single_ΔW))
+    A_x = A_x_broadcasted + x if use_skips else A_x_broadcasted
 
-    # (B, N, hidden_dim, D)
-    ΔWs = compute_over_seq(ΔA, A_x)
+    # (B, N+1, hidden_dim, D)
+    ΔWs = compute_over_seq(ΔA, A_x, Δz)
 
-    # Average across batch → (N, hidden_dim, D)
-    return ΔWs.mean(axis=0)
+    # (B, N+1, D)
+    Δbs = ΔA + Δz if use_skips else jnp.zeros_like(ΔA)
+
+    return ΔWs, Δbs
