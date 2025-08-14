@@ -7,7 +7,7 @@ import jax.numpy as jnp
 import equinox as eqx
 import optax
 
-from utils import set_seed, get_save_dir
+from utils import set_seed, get_save_dir, compute_ΔWs_alignment
 from data import generate_linear_tasks
 from model import Transformer, apply_icl_updates, train_step
 from analytical import compute_icl_updates
@@ -118,6 +118,11 @@ def main(
         )
 
         if t % 100 == 0:
+            ΔWs_alignments = compute_ΔWs_alignment(ΔWs[0])
+            plot_ΔWs_alignments(
+                ΔWs_alignments, 
+                save_path=f"{save_dir}/ΔWs_alignments_t_{t}.pdf"
+            )
             print(f"Step {t} | Loss: {train_loss:.4f}")
 
     np.save(f"{save_dir}/train_losses.npy", train_losses)
