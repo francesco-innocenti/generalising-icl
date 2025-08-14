@@ -1,12 +1,45 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",
-    "font.serif": ["Computer Modern Roman"], # Or "Times New Roman"
+    "font.serif": ["Computer Modern Roman"],
     "axes.formatter.use_mathtext": True,
 })
+
+
+def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
+    n_steps = len(empirical_losses)
+    steps = [b+1 for b in range(n_steps)]
+    
+    _, ax = plt.subplots(figsize=(4, 2)) 
+    ax.plot(
+        steps, 
+        theory_losses, 
+        label="theory", 
+        linewidth=4,
+        linestyle="--",
+        color="black"
+    )
+    ax.plot(
+        steps, 
+        empirical_losses, 
+        label="experiment", 
+        linewidth=2,
+        linestyle="-",
+        color="#636EFA"
+    )
+    
+    ax.legend(fontsize=16)
+    ax.set_xlabel("Training step", fontsize=18, labelpad=10)
+    ax.set_ylabel("Test loss", fontsize=18, labelpad=10)
+    ax.tick_params(axis="both", labelsize=14)
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.savefig(save_path)
 
 
 def plot_ΔWs_alignments(ΔWs_alignments, save_path):
