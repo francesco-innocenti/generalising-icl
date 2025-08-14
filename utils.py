@@ -61,3 +61,22 @@ def get_save_dir(
     )
     os.makedirs(save_dir, exist_ok=True)
     return save_dir
+
+
+def compute_ΔWs_alignment(ΔWs):
+    """Computes the normalised Frobenius inner product between
+    all possible ΔW_i and ΔW_j.
+    
+    """
+    seq_length = ΔWs.shape[0]
+    ΔWs_flat = ΔWs.reshape(seq_length, -1)    # (N, hidden_dim * D)
+    
+    norms = np.linalg.norm(ΔWs_flat, axis=1)  # (N,)
+    inner_prods = ΔWs_flat @ ΔWs_flat.T       # (N, N)
+    norm_matrix = np.outer(norms, norms)      # (N, N)
+
+    # (N, N)
+    normalised_frob = inner_prods / norm_matrix
+    normalised_frob = (normalised_frob + normalised_frob.T) / 2
+
+    return normalised_frob
