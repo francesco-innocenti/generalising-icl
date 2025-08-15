@@ -28,14 +28,14 @@ def compute_icl_updates(
         ΔW_i(C) = (W * ΔA_i) * A(x)^T / ||A(x)||².
 
     Args:
-        model: equinox model.
-        C_x: input with context and query (B, N+1, D).
-        x: input with only query (and no context) (B, 1, D).
-        block_idx: transformer block index for which to compute updates.
-        use_skips: whether to assume residual or skip connections.
+        model: equinox model
+        C_x: input with context and query (B, N+1, D)
+        x: input with only query (and no context) (B, 1, D)
+        block_idx: transformer block index for which to compute updates
+        use_skips: whether to assume residual or skip connections
 
     Returns:   
-        ΔW and Δb for all batches and token positions (B, N+1, H, D).
+        ΔW and Δb for all batches and token positions (B, N+1, H, D)
 
     """
     # A(C, x): attention output with full context → (B, N+1, D)
