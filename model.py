@@ -12,8 +12,8 @@ Array: TypeAlias = jnp.ndarray
 class TransformerBlock(eqx.Module):
     attn: nn.MultiheadAttention
     mlp: nn.MLP
-    norm_attn: nn.LayerNorm
-    norm_mlp: nn.LayerNorm
+    ln_1: nn.LayerNorm
+    ln_2: nn.LayerNorm
     use_layer_norm: bool
     use_skips: bool
 
@@ -41,19 +41,19 @@ class TransformerBlock(eqx.Module):
             activation=jax.nn.gelu,
             key=k2,
         )
-        self.norm_attn = nn.LayerNorm(n_embed)
-        self.norm_mlp = nn.LayerNorm(n_embed)
+        self.ln_1 = nn.LayerNorm(n_embed)
+        self.ln_2 = nn.LayerNorm(n_embed)
         self.use_layer_norm = use_layer_norm
         self.use_skips = use_skips
 
     def attention_layer(self, x):
         if self.use_layer_norm:
-            x = jax.vmap(jax.vmap(self.norm_attn))(x)
+            x = jax.vmap(jax.vmap(self.ln_1))(x)
         return jax.vmap(self.attn)(x, x, x)
 
     def mlp_layer(self, x):
         if self.use_layer_norm:
-            x = jax.vmap(jax.vmap(self.norm_mlp))(x)
+            x = jax.vmap(jax.vmap(self.ln_2))(x)
         return jax.vmap(jax.vmap(self.mlp))(x)
 
     def __call__(self, x):
