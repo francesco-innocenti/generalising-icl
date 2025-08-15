@@ -16,11 +16,16 @@ def compute_icl_updates(
     ):
     """Computes in-context learning updates according to 
         
-        ΔW(C) = (W * ΔA) * A(x)^T / ||A(x)||²
+        ΔW_i(C) = (W * (ΔA_i + Δz_i)) * (A(x) + x)^T / ||A(x) + x||²,
+        Δb_i(C) = ΔA_i + Δz_i,
     
-    where ΔA = A(C, x) - A(x). Note that this is a generalisation of 
-    Equation 8 in https://arxiv.org/abs/2507.16003 for all output tokens, not 
-    just the last.
+    where ΔA_i = A(C, x)_i - A(x) and Δz_i = (C, x)_i - x. This is a 
+    generalisation of Equation 8 in https://arxiv.org/abs/2507.16003 for all 
+    output tokens, the "correct" type of skip connections for Pre-LN 
+    architectures, and any transformer block. Without skips, the update reduces
+    to
+
+        ΔW_i(C) = (W * ΔA_i) * A(x)^T / ||A(x)||².
 
     Args:
         model: equinox model.
@@ -30,7 +35,7 @@ def compute_icl_updates(
         use_skips: whether to assume residual or skip connections.
 
     Returns:   
-        ΔW and Δb for all batches and token positions (N hidden_dim, D).
+        ΔW and Δb for all batches and token positions (B, N+1, H, D).
 
     """
     # A(C, x): attention output with full context → (B, N+1, D)
@@ -39,7 +44,7 @@ def compute_icl_updates(
     # A(x): attention output with query only (no context) → (B, 1, D)
     A_x = model.blocks[block_idx].attention_layer(x)
     
-    # broadcast A_x to match sequence length N of A_C_x → (B, N+1, D)
+    # broadcast A_x to match sequence length of A_C_x → (B, N+1, D)
     A_x_broadcasted = jnp.broadcast_to(A_x, A_C_x.shape)
 
     # ΔA = A(C,x) - A(x) → (B, N+1, D)
@@ -48,13 +53,13 @@ def compute_icl_updates(
     # Δz = (C,x) - x → (B, N+1, D)
     Δz = C_x - x if use_skips else jnp.zeros_like(ΔA)
 
-    # Get the weight matrix W from first MLP layer → (hidden_dim, D)
+    # Get the weight matrix W from first MLP layer → (H, D)
     W = model.blocks[block_idx].mlp.layers[0].weight
 
     def compute_single_ΔW(ΔA_i, A_x_i, Δz_i):
-        """Computes updates for a single batch and token position i."""
-        W_ΔA = W @ (ΔA_i + Δz_i) # (hidden_dim,)
-        numerator = W_ΔA[:, None] @ A_x_i[None, :]  # (hidden_dim, D)
+        """Computes updates for a single data point and token position."""
+        W_ΔA = W @ (ΔA_i + Δz_i) # (H,)
+        numerator = W_ΔA[:, None] @ A_x_i[None, :]  # (H, D)
         denominator = jnp.linalg.norm(A_x_i) ** 2
         ΔW_i = numerator / (denominator + 1e-8)
         return ΔW_i
@@ -62,7 +67,7 @@ def compute_icl_updates(
     compute_over_seq = jax.vmap(jax.vmap(compute_single_ΔW))
     A_x = A_x_broadcasted + x if use_skips else A_x_broadcasted
 
-    # (B, N+1, hidden_dim, D)
+    # (B, N+1, H, D)
     ΔWs = compute_over_seq(ΔA, A_x, Δz)
 
     # (B, N+1, D)
