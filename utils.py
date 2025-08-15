@@ -2,6 +2,9 @@ import os
 import random
 import numpy as np
 
+from jax import vmap
+from jax.numpy.linalg import matrix_rank
+
 
 def set_seed(seed):
     np.random.seed(seed)
@@ -80,3 +83,9 @@ def compute_ΔWs_alignment(ΔWs):
     normalised_frob = (normalised_frob + normalised_frob.T) / 2
 
     return normalised_frob
+
+
+def compute_effective_update_rank(ΔWs):
+    ΔW_sequence_sum = ΔWs.sum(axis=1)  # (B, H, D)   
+    rank_per_b = vmap(matrix_rank)(ΔW_sequence_sum)
+    return rank_per_b  # (B,)
