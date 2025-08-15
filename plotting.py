@@ -40,6 +40,7 @@ def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
 
     plt.tight_layout()
     plt.savefig(save_path)
+    plt.close("all")
 
 
 def plot_ΔWs_alignments(ΔWs_alignments, save_path, title=None):
@@ -79,3 +80,4 @@ def plot_ΔWs_alignments(ΔWs_alignments, save_path, title=None):
     
     plt.tight_layout()
     fig.savefig(save_path)
+    plt.close("all")
