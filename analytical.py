@@ -28,10 +28,10 @@ def compute_icl_updates(
         ΔW_i(C) = (W * ΔA_i) * A(x)^T / ||A(x)||².
 
     Args:
-        model: equinox model
+        model: equinox Transformer model
         C_x: input with context and query (B, N+1, D)
         x: input with only query (and no context) (B, 1, D)
-        block_idx: transformer block index for which to compute updates
+        block_idx: index of the transformer block to update
         use_skips: whether to assume residual or skip connections
 
     Returns:   
