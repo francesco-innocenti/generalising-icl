@@ -16,7 +16,6 @@ def get_save_dir(
         n_tasks,
         seq_len,
         input_dim,
-        n_embed,
         n_heads,
         n_blocks,
         block_idx_to_verify,
@@ -35,7 +34,6 @@ def get_save_dir(
     N tasks: {n_tasks}
     Sequence length: {seq_len}
     Input dim: {input_dim}
-    N embed: {n_embed}
     N heads: {n_heads}
     N blocks: {n_blocks}
     Block idx to verify: {block_idx_to_verify}
@@ -52,7 +50,6 @@ def get_save_dir(
         f"{n_tasks}_tasks",
         f"seq_len_{seq_len}",
         f"input_dim_{input_dim}",
-        f"n_embed_{n_embed}",
         f"{n_heads}_heads",
         f"{n_blocks}_blocks",
         f"block_idx_to_verify_{block_idx_to_verify}",
