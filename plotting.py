@@ -42,7 +42,7 @@ def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
     plt.savefig(save_path)
 
 
-def plot_ΔWs_alignments(ΔWs_alignments, save_path):
+def plot_ΔWs_alignments(ΔWs_alignments, save_path, title=None):
     fig, ax = plt.subplots(figsize=(5, 4), dpi=150)
     im = plt.imshow(
         ΔWs_alignments, 
@@ -53,10 +53,12 @@ def plot_ΔWs_alignments(ΔWs_alignments, save_path):
     )
     cbar = fig.colorbar(im)
     cbar.set_ticks([1, 0, -1])
-    cbar.ax.tick_params(labelsize=18)
+    cbar.ax.tick_params(labelsize=20)
     cbar.set_label("Directional alignment", fontsize=18)
     
-    ax.set_title("$t = 0$", fontsize=18, pad=10)
+    if title is not None:
+        ax.set_title(title, fontsize=20, pad=12)
+
     ax.set_ylabel("$\Delta W_i(C)$", fontsize=18)
     ax.set_xlabel("$\Delta W_j(C)$", fontsize=18)
     
@@ -66,9 +68,9 @@ def plot_ΔWs_alignments(ΔWs_alignments, save_path):
         direction="in", 
         length=6, 
         width=1, 
-        labelsize=16
+        labelsize=18
     )
-    ticks = np.array([0, 50])
+    ticks = np.array([0, 25, 50])
     plt.xticks(ticks, ticks + 1)
     plt.yticks(ticks, ticks + 1)
     
