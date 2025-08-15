@@ -126,7 +126,7 @@ def train_step(model, opt_state, x, y, optim):
 
 def apply_icl_updates(model, ΔW, Δb, block_idx=0):
     """
-    Applies the rank-1 weight update ΔW and the bias update Δb' to a model.
+    Applies updates to the first MLP layer and second bias of a transformer block.
     """
     weight_path = lambda m: m.blocks[block_idx].mlp.layers[0].weight
     bias_path = lambda m: m.blocks[block_idx].mlp.layers[-1].bias
@@ -146,3 +146,57 @@ def apply_icl_updates(model, ΔW, Δb, block_idx=0):
         (W + ΔW, b + Δb)
     )
     return model
+
+
+def _single_block_pass(
+        ΔW, 
+        Δb, 
+        single_x, 
+        model, 
+        block_idx, 
+        apply_updates_fn
+    ):
+    """
+    Performs a single forward pass for one update on one task.
+    This function is designed to be vmapped.
+    """
+    block_input = single_x[None, :, :]  # (1, 1, D)
+    updated_model = apply_updates_fn(model, ΔW, Δb, block_idx)
+    output = updated_model.blocks[block_idx](block_input)  # (1, 1, D)
+    return jnp.squeeze(output, axis=(0, 1))  # (D,)
+
+
+@eqx.filter_jit
+def compute_vectorised_theory_preds(base_model, x, ΔWs, Δbs, block_idx):
+    """
+    Vectorises theoretical block predictions for different updates over batches 
+    and token positions.
+
+    Args:
+        base_model: equinox Transformer model
+        x: batched D-dimensional input query token (B, 1, D)
+        ΔWs: Weight updates unique for each batch and token position (B, N+1, H, D)
+        Δbs: Bias updates unique for each batch and token position (B, N+1, D)
+        block_idx: index of the transformer block to update
+
+    Returns:
+        Prediction array of shape (B, N+1, D)
+
+    """
+    # vmap over the sequence length (N) updates for a *single task*
+    # NOTE: for a single task, `single_x` is constant across all updates
+    vmap_over_updates = jax.vmap(
+        _single_block_pass, 
+        in_axes=(0, 0, None, None, None, None)  # vmap over Δw, Δb
+    )
+
+    # vmap the above function over the task/batch (B) dimension
+    # now we provide an axis for `single_x` because each task has its own input
+    vmap_over_tasks = jax.vmap(
+        vmap_over_updates, 
+        in_axes=(0, 0, 0, None, None, None)  # vmap over ΔWs, Δbs, x
+    )
+
+    # we pass apply_icl_updates as an argument to make the function pure 
+    # and JIT-compatible
+    return vmap_over_tasks(ΔWs, Δbs, x, base_model, block_idx, apply_icl_updates)
