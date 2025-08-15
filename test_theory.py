@@ -9,7 +9,7 @@ import optax
 
 from utils import set_seed, get_save_dir, compute_ΔWs_alignment
 from data import generate_linear_tasks
-from model import Transformer, apply_icl_updates, train_step
+from model import Transformer, train_step, compute_vectorised_theory_preds
 from analytical import compute_icl_updates
 from plotting import plot_empirical_vs_theory_losses, plot_ΔWs_alignments
 
@@ -67,6 +67,11 @@ def main(
     ΔWs_steps = np.zeros(
         (n_steps, n_tasks, seq_len+1, hidden_multiplier * n_embed, n_embed)
     )
+    random_data_idxs = np.random.choice(
+        np.arange(0, n_tasks), 
+        size=3,
+        replace=False
+    )
     for t in range(n_steps):
 
         # test
@@ -77,9 +82,8 @@ def main(
         all_new_C_x_test = [C_x_test] + block_preds
         new_C_x_test = all_new_C_x_test[block_idx_to_verify]
         new_x_test = new_C_x_test[:, -1:]
-        model_copies = [copy.deepcopy(model) for _ in range(seq_len+1)]
         ΔWs, Δbs = compute_icl_updates(
-            model=model_copies[0], 
+            model=model, 
             C_x=new_C_x_test, 
             x=new_x_test,
             block_idx=block_idx_to_verify,
@@ -87,17 +91,15 @@ def main(
         )
         ΔWs_steps[t] = ΔWs
 
-        theory_block_preds = np.zeros((n_tasks, seq_len+1, n_embed))
-        for i in range(seq_len+1):
-            model_copies[i] = apply_icl_updates(
-                model=model_copies[i], 
-                ΔW=ΔWs[0, i],
-                Δb=Δbs[0, i],
-                block_idx=block_idx_to_verify
-            )
-            updated_block = model_copies[i].blocks[block_idx_to_verify]
-            theory_block_preds[:, i] = updated_block(new_x_test)
-        
+        model_copy = copy.deepcopy(model)
+        theory_block_preds = compute_vectorised_theory_preds(
+            base_model=model_copy, 
+            x=new_x_test, 
+            ΔWs=ΔWs, 
+            Δbs=Δbs, 
+            block_idx=block_idx_to_verify
+        )
+
         if block_idx_to_verify+1 == n_blocks:
             theory_test_loss = 0.5 * jnp.mean(
                 (y_test - theory_block_preds[:, -1, -1]) ** 2)
@@ -117,13 +119,16 @@ def main(
             ( (block_preds[block_idx_to_verify] - theory_block_preds)**2 ).sum()
         )
 
-        if t % 100 == 0:
-            ΔWs_alignments = compute_ΔWs_alignment(ΔWs[0])
-            plot_ΔWs_alignments(
-                ΔWs_alignments, 
-                save_path=f"{save_dir}/ΔWs_alignments_t_{t}.pdf"
-            )
-            print(f"Step {t} | Loss: {train_loss:.4f}")
+        if t % 20 == 0:
+            print(f"Step {t} | train loss: {train_loss:.4f} | test loss: {test_loss:.4f}")
+                  
+            for b in random_data_idxs:
+                ΔWs_alignments = compute_ΔWs_alignment(ΔWs[b])
+                plot_ΔWs_alignments(
+                    ΔWs_alignments,
+                    save_path=f"{save_dir}/ΔWs_alignments_b_{b}_t_{t}.pdf",
+                    title=f"$t = {t}$"
+                )
 
     np.save(f"{save_dir}/train_losses.npy", train_losses)
     np.save(f"{save_dir}/test_losses.npy", test_losses)
@@ -143,16 +148,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', type=str, default="results")
     parser.add_argument('--seed', type=int, default=53093)
-    parser.add_argument('--n_tasks', type=int, default=1)
+    parser.add_argument('--n_tasks', type=int, default=128)
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_embed', type=int, default=3)
     parser.add_argument('--n_heads', type=int, default=1)
-    parser.add_argument('--n_blocks', type=int, default=1)
-    parser.add_argument('--block_idx_to_verify', type=int, default=0)
+    parser.add_argument('--n_blocks', type=int, default=2)
+    parser.add_argument('--block_idx_to_verify', type=int, default=1)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
-    parser.add_argument('--n_steps', type=int, default=200)
+    parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--param_lr', type=float, default=5e-3)
     args = parser.parse_args()
     
