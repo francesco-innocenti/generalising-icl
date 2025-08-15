@@ -1,4 +1,3 @@
-import copy
 import argparse
 import numpy as np
 
@@ -7,7 +6,7 @@ import jax.numpy as jnp
 import equinox as eqx
 import optax
 
-from utils import set_seed, get_save_dir, compute_ΔWs_alignment
+from utils import set_seed, get_save_dir, compute_ΔWs_alignment, compute_effective_update_rank
 from data import generate_linear_tasks
 from model import Transformer, train_step, compute_vectorised_theory_preds
 from analytical import compute_icl_updates
@@ -31,24 +30,9 @@ def main(
 ):
     set_seed(seed)
     key = jr.PRNGKey(seed)
-    data_key, model_key = jr.split(key, 2)
+    train_key, test_key, model_key = jr.split(key, 3)
 
-    # data
-    train_key, test_key = jr.split(data_key, 2)
-    C_x_train, y_train = generate_linear_tasks(
-        n_tasks=n_tasks,
-        seq_len=seq_len,
-        dim=input_dim,
-        key=train_key
-    )
-    C_x_test, y_test = generate_linear_tasks(
-        n_tasks=n_tasks,
-        seq_len=seq_len,
-        dim=input_dim,
-        key=test_key
-    )
-
-    # model and optims
+    # --- model & optim ---
     model = Transformer(
         n_embed=n_embed,
         n_heads=n_heads,
@@ -60,25 +44,43 @@ def main(
     optim = optax.adam(param_lr)
     opt_state = optim.init(eqx.filter(model, eqx.is_array))
     
+    # --- metrics ---
     train_losses, test_losses = [], []
+    theory_block_preds_diffs = []
     theory_test_losses = [] if block_idx_to_verify+1 == n_blocks else None
-    preds_diffs = []
     
+    effective_update_ranks = np.zeros((n_steps, n_tasks))
     ΔWs_steps = np.zeros(
         (n_steps, n_tasks, seq_len+1, hidden_multiplier * n_embed, n_embed)
     )
     random_data_idxs = np.random.choice(
         np.arange(0, n_tasks), 
-        size=3,
+        size=3 if n_tasks >= 3 else 1,
         replace=False
     )
     for t in range(n_steps):
+        
+        # --- generate data ---
+        train_key, step_train_key = jr.split(train_key)
+        test_key, step_test_key = jr.split(test_key)
 
-        # test
+        C_x_train, y_train = generate_linear_tasks(
+            n_tasks=n_tasks,
+            seq_len=seq_len,
+            dim=input_dim,
+            key=step_train_key
+        )
+        C_x_test, y_test = generate_linear_tasks(
+            n_tasks=n_tasks,
+            seq_len=seq_len,
+            dim=input_dim,
+            key=step_test_key
+        )
+
+        # --- test empirical vs theory preds ---
         preds, block_preds = model(C_x_test, return_activations=True)
         test_loss = 0.5 * jnp.mean((y_test - preds) ** 2)
 
-        # ΔW model
         all_new_C_x_test = [C_x_test] + block_preds
         new_C_x_test = all_new_C_x_test[block_idx_to_verify]
         new_x_test = new_C_x_test[:, -1:]
@@ -90,10 +92,10 @@ def main(
             use_skips=use_skips
         )
         ΔWs_steps[t] = ΔWs
+        effective_update_ranks[t, :] = compute_effective_update_rank(ΔWs)
 
-        model_copy = copy.deepcopy(model)
         theory_block_preds = compute_vectorised_theory_preds(
-            base_model=model_copy, 
+            base_model=model, 
             x=new_x_test, 
             ΔWs=ΔWs, 
             Δbs=Δbs, 
@@ -105,7 +107,7 @@ def main(
                 (y_test - theory_block_preds[:, -1, -1]) ** 2)
             theory_test_losses.append(theory_test_loss)
 
-        # train
+        # --- train ---
         model, opt_state, train_loss = train_step(
             model,
             opt_state,
@@ -115,7 +117,7 @@ def main(
         )
         train_losses.append(train_loss)
         test_losses.append(test_loss)
-        preds_diffs.append(
+        theory_block_preds_diffs.append(
             ( (block_preds[block_idx_to_verify] - theory_block_preds)**2 ).sum()
         )
 
@@ -130,11 +132,15 @@ def main(
                     title=f"$t = {t}$"
                 )
 
+    # --- save ---
     np.save(f"{save_dir}/train_losses.npy", train_losses)
     np.save(f"{save_dir}/test_losses.npy", test_losses)
-    np.save(f"{save_dir}/theory_test_losses.npy", theory_test_losses)
-    np.save(f"{save_dir}/preds_diffs.npy", preds_diffs)
+    if theory_test_losses is not None:
+        np.save(f"{save_dir}/theory_test_losses.npy", theory_test_losses)
+
+    np.save(f"{save_dir}/theory_block_preds_diffs.npy", theory_block_preds_diffs)
     np.save(f"{save_dir}/ΔWs_steps.npy", ΔWs_steps)
+    np.save(f"{save_dir}/effective_update_ranks.npy", effective_update_ranks)
     
     if block_idx_to_verify+1 == n_blocks:
         plot_empirical_vs_theory_losses(
@@ -152,13 +158,13 @@ if __name__ == "__main__":
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_embed', type=int, default=3)
-    parser.add_argument('--n_heads', type=int, default=1)
-    parser.add_argument('--n_blocks', type=int, default=2)
-    parser.add_argument('--block_idx_to_verify', type=int, default=1)
+    parser.add_argument('--n_heads', type=int, default=3)
+    parser.add_argument('--n_blocks', type=int, default=1)
+    parser.add_argument('--block_idx_to_verify', type=int, default=0)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
-    parser.add_argument('--param_lr', type=float, default=5e-3)
+    parser.add_argument('--param_lr', type=float, default=1e-1)
     args = parser.parse_args()
     
     assert args.n_embed == args.input_dim + 1
