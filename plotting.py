@@ -44,6 +44,7 @@ def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
 
 
 def plot_ΔWs_alignments(ΔWs_alignments, save_path, title=None):
+    N = len(ΔWs_alignments)-1
     fig, ax = plt.subplots(figsize=(5, 4), dpi=150)
     im = plt.imshow(
         ΔWs_alignments, 
@@ -71,7 +72,7 @@ def plot_ΔWs_alignments(ΔWs_alignments, save_path, title=None):
         width=1, 
         labelsize=18
     )
-    ticks = np.array([0, 25, 50])
+    ticks = np.array([0, int(N/2), N])
     plt.xticks(ticks, ticks + 1)
     plt.yticks(ticks, ticks + 1)
     
