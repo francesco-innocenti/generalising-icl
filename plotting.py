@@ -87,12 +87,11 @@ def plot_ΔWs_alignments(ΔWs_alignments, save_path, title=None):
 def plot_norms(norms, norm_type, save_path):
     n_steps, n_blocks = norms.shape
     steps = [b+1 for b in range(n_steps)]
-    #"$\Large{||W_\ell||_F}$"
-    y_axis_label = "$||\Delta W_{N+1}(C)||_F$" if (
+    y_axis_label = "$||\Delta W(C)||_F$" if (
         norm_type == "frob" 
-    ) else "$||\Delta W_{N+1}(C)||_2$"
+    ) else "$||\Delta W(C)||_2$"
     
-    _, ax = plt.subplots(figsize=(6, 4)) 
+    _, ax = plt.subplots(figsize=(6, 3)) 
     for block_idx in range(n_blocks):
         ax.plot(
             steps, 
