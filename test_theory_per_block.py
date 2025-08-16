@@ -6,7 +6,12 @@ import jax.numpy as jnp
 import equinox as eqx
 import optax
 
-from utils import set_seed, get_save_dir, compute_ΔWs_alignment, compute_effective_update_rank
+from utils import (
+    set_seed, 
+    get_save_dir,
+    compute_ΔWs_alignment, 
+    compute_effective_update_rank
+)
 from data import generate_linear_tasks
 from model import Transformer, train_step, compute_vectorised_theory_preds
 from analytical import compute_icl_updates
@@ -18,16 +23,20 @@ def main(
         n_tasks: int,
         seq_len: int,
         input_dim: int,
-        n_embed: int,
         n_heads: int,
         n_blocks: int,
         block_idx_to_verify: int,
         use_skips: bool,
+        use_layer_norm: bool,
         hidden_multiplier: int,
         n_steps: int,
         param_lr: float,
         save_dir: str
-):
+):  
+    n_embed = input_dim + 1
+    assert n_embed % n_heads == 0
+    assert block_idx_to_verify < n_blocks
+
     set_seed(seed)
     key = jr.PRNGKey(seed)
     train_key, test_key, model_key = jr.split(key, 3)
@@ -39,6 +48,7 @@ def main(
         n_blocks=n_blocks,
         key=model_key,
         use_skips=use_skips,
+        use_layer_norm=use_layer_norm,
         hidden_multiplier=hidden_multiplier
     )
     optim = optax.adam(param_lr)
@@ -148,7 +158,37 @@ def main(
             theory_test_losses,
             f"{save_dir}/test_losses.pdf"
         )
-    
+
+
+def run_single_param_sweeps(base_args, sweeps: dict):
+    """
+    sweeps: dict mapping parameter name -> list of values
+    Example:
+        {"n_tasks": [16, 32, 64], "seq_len": [50, 250]}
+    """
+    for param, values in sweeps.items():
+        print(f"\nRunning sweep for {param}")
+        for v in values:
+            args = argparse.Namespace(**vars(base_args))
+            setattr(args, param, v)
+
+            args.save_dir = get_save_dir(
+                base_args.save_dir,
+                n_tasks=args.n_tasks,
+                seq_len=args.seq_len,
+                input_dim=args.input_dim,
+                n_heads=args.n_heads,
+                n_blocks=args.n_blocks,
+                block_idx_to_verify=args.block_idx_to_verify,
+                use_skips=args.use_skips,
+                use_layer_norm=args.use_layer_norm,
+                hidden_multiplier=args.hidden_multiplier,
+                n_steps=args.n_steps,
+                param_lr=args.param_lr,
+                seed=args.seed
+            )
+            main(**vars(args))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -157,19 +197,44 @@ if __name__ == "__main__":
     parser.add_argument('--n_tasks', type=int, default=128)
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
-    parser.add_argument('--n_embed', type=int, default=3)
-    parser.add_argument('--n_heads', type=int, default=3)
+    parser.add_argument('--n_heads', type=int, default=1)
     parser.add_argument('--n_blocks', type=int, default=1)
     parser.add_argument('--block_idx_to_verify', type=int, default=0)
     parser.add_argument('--use_skips', type=bool, default=True)
+    parser.add_argument('--use_layer_norm', type=bool, default=False)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--param_lr', type=float, default=1e-1)
+    parser.add_argument('--sweep', type=bool, default=False, 
+                        help="Run parameter sweeps instead of a single experiment")
     args = parser.parse_args()
     
-    assert args.n_embed == args.input_dim + 1
-    assert args.block_idx_to_verify < args.n_blocks
+    # --- one-block model analysis ---
+    sweeps = {
+        "n_tasks": [2**i for i in range(14)],
+        "seq_len": [50, 250, 1250],
+        "input_dim": [2, 20],
+        "n_heads": [1, 3],
+        "use_layer_norm": [False, True],
+    }
     
-    save_dir = get_save_dir(**vars(args))
-    args.save_dir = save_dir
-    main(**vars(args))
+    if args.sweep:
+        run_single_param_sweeps(args, sweeps)
+    else:
+        save_dir = get_save_dir(
+            args.save_dir,
+            n_tasks=args.n_tasks,
+            seq_len=args.seq_len,
+            input_dim=args.input_dim,
+            n_heads=args.n_heads,
+            n_blocks=args.n_blocks,
+            block_idx_to_verify=args.block_idx_to_verify,
+            use_skips=args.use_skips,
+            use_layer_norm=args.use_layer_norm,
+            hidden_multiplier=args.hidden_multiplier,
+            n_steps=args.n_steps,
+            param_lr=args.param_lr,
+            seed=args.seed
+        )
+        args.save_dir = save_dir
+        main(**vars(args))
