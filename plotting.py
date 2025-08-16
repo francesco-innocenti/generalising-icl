@@ -14,7 +14,7 @@ def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
     n_steps = len(empirical_losses)
     steps = [b+1 for b in range(n_steps)]
     
-    _, ax = plt.subplots(figsize=(4, 2)) 
+    fig, ax = plt.subplots(figsize=(4, 2)) 
     ax.plot(
         steps, 
         theory_losses, 
@@ -39,7 +39,7 @@ def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
     plt.grid(True)
 
     plt.tight_layout()
-    plt.savefig(save_path)
+    fig.savefig(save_path)
     plt.close("all")
 
 
@@ -81,4 +81,31 @@ def plot_ΔWs_alignments(ΔWs_alignments, save_path, title=None):
     
     plt.tight_layout()
     fig.savefig(save_path)
+    plt.close("all")
+
+
+def plot_norms(norms, norm_type, save_path):
+    n_steps, n_blocks = norms.shape
+    steps = [b+1 for b in range(n_steps)]
+    #"$\Large{||W_\ell||_F}$"
+    y_axis_label = "$||\Delta W_{N+1}(C)||_F$" if (
+        norm_type == "frob" 
+    ) else "$||\Delta W_{N+1}(C)||_2$"
+    
+    _, ax = plt.subplots(figsize=(6, 4)) 
+    for block_idx in range(n_blocks):
+        ax.plot(
+            steps, 
+            norms[:, block_idx], 
+            label=f"block {block_idx+1}"
+        )
+    
+    ax.legend(fontsize=16)
+    ax.set_xlabel("Training step", fontsize=18, labelpad=10)
+    ax.set_ylabel(y_axis_label, fontsize=18, labelpad=10)
+    ax.tick_params(axis="both", labelsize=14)
+    plt.grid(True)
+    
+    plt.tight_layout()
+    plt.savefig(save_path)
     plt.close("all")
