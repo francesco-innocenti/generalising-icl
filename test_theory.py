@@ -140,8 +140,6 @@ def main(
             # --- alignment between token positions ---
             for task in random_task_idxs:
                 for block in range(n_blocks):
-                    print(f"ΔWs_steps[t, block, task] shape: {ΔWs_steps[t, block, task].shape}")
-                    print(f"ΔWs_steps[t, :, task, -1] shape: {ΔWs_steps[t, :, task, -1].shape}")
                     ΔWs_alignments = compute_ΔWs_alignment(ΔWs_steps[t, block, task])
                     plot_ΔWs_alignments(
                         ΔWs_alignments,
