@@ -6,16 +6,21 @@ import jax.numpy as jnp
 import equinox as eqx
 import optax
 
+from data import generate_linear_tasks
+from model import Transformer, train_step, compute_vectorised_theory_preds
+from analytical import compute_icl_updates
+
 from utils import (
     set_seed, 
     get_save_dir,
     compute_ΔWs_alignment, 
     compute_effective_update_rank
 )
-from data import generate_linear_tasks
-from model import Transformer, train_step, compute_vectorised_theory_preds
-from analytical import compute_icl_updates
-from plotting import plot_empirical_vs_theory_losses, plot_ΔWs_alignments
+from plotting import (
+    plot_empirical_vs_theory_losses, 
+    plot_ΔWs_alignments, 
+    plot_norms
+)
 
 
 def main(
@@ -25,7 +30,6 @@ def main(
         input_dim: int,
         n_heads: int,
         n_blocks: int,
-        block_idx_to_verify: int,
         use_skips: bool,
         use_layer_norm: bool,
         hidden_multiplier: int,
@@ -35,7 +39,6 @@ def main(
 ):  
     n_embed = input_dim + 1
     assert n_embed % n_heads == 0
-    assert block_idx_to_verify < n_blocks
 
     set_seed(seed)
     key = jr.PRNGKey(seed)
@@ -55,15 +58,14 @@ def main(
     opt_state = optim.init(eqx.filter(model, eqx.is_array))
     
     # --- metrics ---
-    train_losses, test_losses = [], []
-    theory_block_preds_diffs = []
-    theory_test_losses = [] if block_idx_to_verify+1 == n_blocks else None
+    train_losses, test_losses, theory_test_losses = [], [], []
+    theory_preds_squared_diffs = np.zeros((n_steps, n_blocks))
     
-    effective_update_ranks = np.zeros((n_steps, n_tasks))
+    effective_updates_ranks = np.zeros((n_steps, n_blocks, n_tasks))
     ΔWs_steps = np.zeros(
-        (n_steps, n_tasks, seq_len+1, hidden_multiplier * n_embed, n_embed)
+        (n_steps, n_blocks, n_tasks, seq_len+1, hidden_multiplier * n_embed, n_embed)
     )
-    random_data_idxs = np.random.choice(
+    random_task_idxs = np.random.choice(
         np.arange(0, n_tasks), 
         size=3 if n_tasks >= 3 else 1,
         replace=False
@@ -87,35 +89,37 @@ def main(
             key=step_test_key
         )
 
-        # --- test empirical vs theory preds ---
+        # --- empirical vs theory test preds ---
         preds, block_preds = model(C_x_test, return_activations=True)
         test_loss = 0.5 * jnp.mean((y_test - preds) ** 2)
 
         all_new_C_x_test = [C_x_test] + block_preds
-        new_C_x_test = all_new_C_x_test[block_idx_to_verify]
-        new_x_test = new_C_x_test[:, -1:]
-        ΔWs, Δbs = compute_icl_updates(
-            model=model, 
-            C_x=new_C_x_test, 
-            x=new_x_test,
-            block_idx=block_idx_to_verify,
-            use_skips=use_skips
-        )
-        ΔWs_steps[t] = ΔWs
-        effective_update_ranks[t, :] = compute_effective_update_rank(ΔWs)
+        for block_idx in range(n_blocks):
+            new_C_x_test = all_new_C_x_test[block_idx]
+            new_x_test = new_C_x_test[:, -1:]
 
-        theory_block_preds = compute_vectorised_theory_preds(
-            base_model=model, 
-            x=new_x_test, 
-            ΔWs=ΔWs, 
-            Δbs=Δbs, 
-            block_idx=block_idx_to_verify
-        )
+            ΔWs, Δbs = compute_icl_updates(
+                model=model, 
+                C_x=new_C_x_test, 
+                x=new_x_test,
+                block_idx=block_idx,
+                use_skips=use_skips
+            )
+            ΔWs_steps[t, block_idx] = ΔWs
+            effective_updates_ranks[t, block_idx] = compute_effective_update_rank(ΔWs)
 
-        if block_idx_to_verify+1 == n_blocks:
-            theory_test_loss = 0.5 * jnp.mean(
-                (y_test - theory_block_preds[:, -1, -1]) ** 2)
-            theory_test_losses.append(theory_test_loss)
+            theory_block_preds = compute_vectorised_theory_preds(
+                base_model=model, 
+                x=new_x_test, 
+                ΔWs=ΔWs, 
+                Δbs=Δbs, 
+                block_idx=block_idx
+            )
+            theory_preds_squared_diffs[t, block_idx] = ( 
+                (block_preds[block_idx] - theory_block_preds)**2 ).sum()
+        
+        theory_test_loss = 0.5 * jnp.mean(
+            (y_test - theory_block_preds[:, -1, -1]) ** 2)
 
         # --- train ---
         model, opt_state, train_loss = train_step(
@@ -125,38 +129,57 @@ def main(
             y_train,
             optim
         )
+        
         train_losses.append(train_loss)
         test_losses.append(test_loss)
-        theory_block_preds_diffs.append(
-            ( (block_preds[block_idx_to_verify] - theory_block_preds)**2 ).sum()
-        )
+        theory_test_losses.append(theory_test_loss)
 
         if t % 20 == 0:
             print(f"Step {t} | train loss: {train_loss:.4f} | test loss: {test_loss:.4f}")
                   
-            for b in random_data_idxs:
-                ΔWs_alignments = compute_ΔWs_alignment(ΔWs[b])
-                plot_ΔWs_alignments(
-                    ΔWs_alignments,
-                    save_path=f"{save_dir}/ΔWs_alignments_b_{b}_t_{t}.pdf",
-                    title=f"$t = {t}$"
-                )
+            for task in random_task_idxs:
+                for block in range(n_blocks):
+                    ΔWs_alignments = compute_ΔWs_alignment(ΔWs_steps[t, block, task])
+                    plot_ΔWs_alignments(
+                        ΔWs_alignments,
+                        save_path=f"{save_dir}/ΔWs_alignments_t_{t}_block_{block}_task_{task}.pdf",
+                        title=f"$t = {t}$"
+                    )
 
-    # --- save ---
+    # --- saving ---
     np.save(f"{save_dir}/train_losses.npy", train_losses)
     np.save(f"{save_dir}/test_losses.npy", test_losses)
-    if theory_test_losses is not None:
-        np.save(f"{save_dir}/theory_test_losses.npy", theory_test_losses)
+    np.save(f"{save_dir}/theory_test_losses.npy", theory_test_losses)
 
-    np.save(f"{save_dir}/theory_block_preds_diffs.npy", theory_block_preds_diffs)
+    np.save(f"{save_dir}/theory_preds_squared_diffs.npy", theory_preds_squared_diffs)
     np.save(f"{save_dir}/ΔWs_steps.npy", ΔWs_steps)
-    np.save(f"{save_dir}/effective_update_ranks.npy", effective_update_ranks)
+    np.save(f"{save_dir}/effective_updates_ranks.npy", effective_updates_ranks)
     
-    if block_idx_to_verify+1 == n_blocks:
-        plot_empirical_vs_theory_losses(
-            test_losses,
-            theory_test_losses,
-            f"{save_dir}/test_losses.pdf"
+    # --- plotting ---
+    plot_empirical_vs_theory_losses(
+        test_losses,
+        theory_test_losses,
+        f"{save_dir}/test_losses.pdf"
+    )
+    for task in random_task_idxs:
+        ΔWs_task_last_token = ΔWs_steps[:, :, task, -1]  # (T, L, H, D)
+        ΔWs_frob_norms = jnp.linalg.norm(                # (T, L)
+            ΔWs_task_last_token, 
+            ord="fro", 
+            axis=(-2, -1)
+        )
+        ΔWs_spectral_norm = jnp.linalg.svd(
+            ΔWs_task_last_token, compute_uv=False)[:, :, 0]
+        
+        plot_norms(
+            ΔWs_frob_norms, 
+            "frob", 
+            f"{save_dir}/ΔWs_frob_norms.pdf"
+        )
+        plot_norms(
+            ΔWs_spectral_norm, 
+            "spectral", 
+            f"{save_dir}/ΔWs_spectral_norms.pdf"
         )
 
 
@@ -173,7 +196,7 @@ def run_single_param_sweeps(base_args, sweeps: dict):
             setattr(args, param, v)
 
             args.save_dir = get_save_dir(
-                base_args.save_dir,
+                save_dir=base_args.save_dir,
                 n_tasks=args.n_tasks,
                 seq_len=args.seq_len,
                 input_dim=args.input_dim,
@@ -198,8 +221,7 @@ if __name__ == "__main__":
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_heads', type=int, default=1)
-    parser.add_argument('--n_blocks', type=int, default=1)
-    parser.add_argument('--block_idx_to_verify', type=int, default=0)
+    parser.add_argument('--n_blocks', type=int, default=2)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--use_layer_norm', type=bool, default=False)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
@@ -221,14 +243,14 @@ if __name__ == "__main__":
     if args.sweep:
         run_single_param_sweeps(args, sweeps)
     else:
-        save_dir = get_save_dir(
-            args.save_dir,
+        delattr(args, "sweep")
+        args.save_dir = get_save_dir(
+            save_dir=args.save_dir,
             n_tasks=args.n_tasks,
             seq_len=args.seq_len,
             input_dim=args.input_dim,
             n_heads=args.n_heads,
             n_blocks=args.n_blocks,
-            block_idx_to_verify=args.block_idx_to_verify,
             use_skips=args.use_skips,
             use_layer_norm=args.use_layer_norm,
             hidden_multiplier=args.hidden_multiplier,
@@ -236,5 +258,4 @@ if __name__ == "__main__":
             param_lr=args.param_lr,
             seed=args.seed
         )
-        args.save_dir = save_dir
         main(**vars(args))
