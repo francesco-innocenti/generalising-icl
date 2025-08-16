@@ -136,15 +136,27 @@ def main(
 
         if t % 20 == 0:
             print(f"Step {t} | train loss: {train_loss:.4f} | test loss: {test_loss:.4f}")
-                  
+            
+            # --- alignment between token positions ---
             for task in random_task_idxs:
                 for block in range(n_blocks):
+                    print(f"ΔWs_steps[t, block, task] shape: {ΔWs_steps[t, block, task].shape}")
+                    print(f"ΔWs_steps[t, :, task, -1] shape: {ΔWs_steps[t, :, task, -1].shape}")
                     ΔWs_alignments = compute_ΔWs_alignment(ΔWs_steps[t, block, task])
                     plot_ΔWs_alignments(
                         ΔWs_alignments,
-                        save_path=f"{save_dir}/ΔWs_alignments_t_{t}_block_{block}_task_{task}.pdf",
+                        save_path=f"{save_dir}/ΔWs_tokens_alignment_t_{t}_block_{block}_task_{task}.pdf",
                         title=f"$t = {t}$"
                     )
+            
+            # --- alignment between blocks (for last token) ---
+            for task in random_task_idxs:
+                ΔWs_alignments = compute_ΔWs_alignment(ΔWs_steps[t, :, task, -1])
+                plot_ΔWs_alignments(
+                    ΔWs_alignments,
+                    save_path=f"{save_dir}/ΔWs_last_token_blocks_alignment_t_{t}_task_{task}.pdf",
+                    title=f"$t = {t}$"
+                )
 
     # --- saving ---
     np.save(f"{save_dir}/train_losses.npy", train_losses)
@@ -174,12 +186,12 @@ def main(
         plot_norms(
             ΔWs_frob_norms, 
             "frob", 
-            f"{save_dir}/ΔWs_frob_norms.pdf"
+            f"{save_dir}/ΔWs_frob_norms_task_{task}.pdf"
         )
         plot_norms(
             ΔWs_spectral_norm, 
             "spectral", 
-            f"{save_dir}/ΔWs_spectral_norms.pdf"
+            f"{save_dir}/ΔWs_spectral_norms_task_{task}.pdf"
         )
 
 

@@ -64,18 +64,21 @@ def get_save_dir(
 
 
 def compute_ΔWs_alignment(ΔWs):
-    """Computes the normalised Frobenius inner product between
-    all possible ΔW_i and ΔW_j.
+    """Computes the normalised Frobenius inner product between ΔW.
+
+    This is used to estimate the alignment of the implicit weight updates for 
+    either all token positions ΔW_i for a given block or all blocks for the 
+    last token ΔW_(N + 1). 
     
     """
-    seq_length = ΔWs.shape[0]
-    ΔWs_flat = ΔWs.reshape(seq_length, -1)    # (N, hidden_dim * D)
+    iv = ΔWs.shape[0]
+    ΔWs_flat = ΔWs.reshape(iv, -1)    # (m, hidden_dim * D)
     
-    norms = np.linalg.norm(ΔWs_flat, axis=1)  # (N,)
-    inner_prods = ΔWs_flat @ ΔWs_flat.T       # (N, N)
-    norm_matrix = np.outer(norms, norms)      # (N, N)
+    norms = np.linalg.norm(ΔWs_flat, axis=1)  # (m,)
+    inner_prods = ΔWs_flat @ ΔWs_flat.T       # (m, m)
+    norm_matrix = np.outer(norms, norms)      # (m, m)
 
-    # (N, N)
+    # (m, m)
     normalised_frob = inner_prods / norm_matrix
     normalised_frob = (normalised_frob + normalised_frob.T) / 2
 
