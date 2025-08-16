@@ -20,6 +20,7 @@ def get_save_dir(
         n_blocks,
         block_idx_to_verify,
         use_skips,
+        use_layer_norm,
         hidden_multiplier,
         n_steps,
         param_lr,
@@ -38,6 +39,7 @@ def get_save_dir(
     N blocks: {n_blocks}
     Block idx to verify: {block_idx_to_verify}
     Use skips: {use_skips}
+    Use layer norm: {use_layer_norm}
     Hidden multiplier: {hidden_multiplier}
     Training steps: {n_steps}
     Param lr: {param_lr}
@@ -54,6 +56,7 @@ def get_save_dir(
         f"{n_blocks}_blocks",
         f"block_idx_to_verify_{block_idx_to_verify}",
         "skips" if use_skips else "no_skips",
+        "layer_norm" if use_layer_norm else "no_layer_norm",
         f"hidden_multiplier_{hidden_multiplier}",
         f"{n_steps}_steps",
         f"param_lr_{param_lr}",
