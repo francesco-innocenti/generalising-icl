@@ -87,5 +87,5 @@ def compute_ΔWs_alignment(ΔWs):
 
 def compute_effective_update_rank(ΔWs):
     ΔW_sequence_sum = ΔWs.sum(axis=1)  # (B, H, D)   
-    rank_per_b = vmap(jnp.linalg.matrix_rank)(ΔW_sequence_sum)
-    return rank_per_b  # (B,)
+    rank_per_batch = vmap(jnp.linalg.matrix_rank)(ΔW_sequence_sum)
+    return rank_per_batch  # (B,)
