@@ -230,11 +230,12 @@ def main(
         f"{save_dir}/ΔWs_mean_spectral_norms.pdf",
         stds=ΔWs_spectral_norm.mean(axis=-1)
     )
-    plot_blocks_update_rank(
-        effective_updates_ranks.mean(axis=-1),
-        t=0,
-        save_path=f"{save_dir}/blocks_update_rank.pdf"
-    )
+    for t in [0, n_steps]:
+        plot_blocks_update_rank(
+            effective_updates_ranks,
+            t=t,
+            save_path=f"{save_dir}/blocks_update_rank_t_{t}.pdf"
+        )
     
     for task in random_task_idxs:
         for block in range(n_blocks):
@@ -305,7 +306,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--use_layer_norm', type=bool, default=False)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
-    parser.add_argument('--n_steps', type=int, default=1)
+    parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--param_lr', type=float, default=1e-1)
     parser.add_argument('--sweep', type=bool, default=False, 
                         help="Run parameter sweeps instead of a single experiment")
