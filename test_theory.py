@@ -21,7 +21,8 @@ from utils import (
 from plotting import (
     plot_empirical_vs_theory_losses, 
     plot_ΔWs_alignment, 
-    plot_norms
+    plot_norms,
+    plot_blocks_update_rank
 )
 import imageio
 
@@ -64,10 +65,10 @@ def main(
     train_losses, test_losses, theory_test_losses = [], [], []
     theory_preds_squared_diffs = np.zeros((n_steps, n_blocks))
     
-    effective_updates_ranks = np.zeros((n_steps, n_blocks, n_tasks))
     ΔWs_steps = np.zeros(
         (n_steps, n_blocks, n_tasks, seq_len+1, hidden_multiplier * n_embed, n_embed)
     )
+    effective_updates_ranks = np.zeros((n_steps, n_blocks, n_tasks))
     random_task_idxs = np.random.choice(
         np.arange(0, n_tasks), 
         size=3 if n_tasks >= 3 else 1,
@@ -138,47 +139,48 @@ def main(
         theory_test_losses.append(theory_test_loss)
 
         if t % 20 == 0:
-            print(f"Step {t} | train loss: {train_loss:.4f} | test loss: {test_loss:.4f}")
-            
-            # --- alignment between token positions ---
-            for block in range(n_blocks):
-                ΔWs_tokens_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
-                    ΔWs_steps[t, block]
-                )
-                plot_ΔWs_alignment(
-                    ΔWs_tokens_alignment_all_tasks.mean(axis=0),
-                    alignment_type="tokens",
-                    save_path=f"{save_dir}/ΔWs_mean_tokens_alignment_t_{t}_block_{block}.png",
-                    title=f"$t = {t}$"
-                )
-                for task in random_task_idxs:
-                    ΔWs_tokens_alignment = compute_ΔWs_alignment(ΔWs_steps[t, block, task])
-                    plot_ΔWs_alignment(
-                        ΔWs_tokens_alignment,
-                        alignment_type="tokens",
-                        save_path=f"{save_dir}/ΔWs_tokens_alignment_t_{t}_block_{block}_task_{task}.png",
-                        title=f"$t = {t}$"
-                    )
-            
-            # --- alignment between blocks (for last token) ---
-            ΔWs_blocks_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
-                ΔWs_steps[t, :, :, -1].reshape(n_tasks, n_blocks, -1)
+            print(f"Step {t} | train loss: {train_loss:.4f} | test loss: {test_loss:.4f}") 
+    
+        # --- alignment between token positions ---
+        t_str = f"{t:04d}"
+        for block in range(n_blocks):
+            ΔWs_tokens_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
+                ΔWs_steps[t, block]
             )
             plot_ΔWs_alignment(
-                ΔWs_blocks_alignment_all_tasks.mean(axis=0),
-                alignment_type="blocks",
-                save_path=f"{save_dir}/ΔWs_mean_blocks_alignment_t_{t}.png",
+                ΔWs_tokens_alignment_all_tasks.mean(axis=0),
+                alignment_type="tokens",
+                save_path=f"{save_dir}/ΔWs_mean_tokens_alignment_t_{t_str}_block_{block}.png",
                 title=f"$t = {t}$"
-            ) 
+            )
             for task in random_task_idxs:
-                ΔWs_blocks_alignment = compute_ΔWs_alignment(ΔWs_steps[t, :, task, -1])
+                ΔWs_tokens_alignment = compute_ΔWs_alignment(ΔWs_steps[t, block, task])
                 plot_ΔWs_alignment(
-                    ΔWs_blocks_alignment,
-                    alignment_type="blocks",
-                    save_path=f"{save_dir}/ΔWs_blocks_alignment_t_{t}_task_{task}.png",
+                    ΔWs_tokens_alignment,
+                    alignment_type="tokens",
+                    save_path=f"{save_dir}/ΔWs_tokens_alignment_t_{t}_block_{block}_task_{task}.png",
                     title=f"$t = {t}$"
-                )      
-
+                )
+        
+        # --- alignment between blocks (for last token) ---
+        ΔWs_blocks_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
+            ΔWs_steps[t, :, :, -1].reshape(n_tasks, n_blocks, -1)
+        )
+        plot_ΔWs_alignment(
+            ΔWs_blocks_alignment_all_tasks.mean(axis=0),
+            alignment_type="blocks",
+            save_path=f"{save_dir}/ΔWs_mean_blocks_alignment_t_{t_str}.png",
+            title=f"$t = {t}$"
+        ) 
+        for task in random_task_idxs:
+            ΔWs_blocks_alignment = compute_ΔWs_alignment(ΔWs_steps[t, :, task, -1])
+            plot_ΔWs_alignment(
+                ΔWs_blocks_alignment,
+                alignment_type="blocks",
+                save_path=f"{save_dir}/ΔWs_blocks_alignment_t_{t}_task_{task}.png",
+                title=f"$t = {t}$"
+            )   
+  
     # --- saving ---
     np.save(f"{save_dir}/train_losses.npy", train_losses)
     np.save(f"{save_dir}/test_losses.npy", test_losses)
@@ -228,6 +230,11 @@ def main(
         f"{save_dir}/ΔWs_mean_spectral_norms.pdf",
         stds=ΔWs_spectral_norm.mean(axis=-1)
     )
+    plot_blocks_update_rank(
+        effective_updates_ranks.mean(axis=-1),
+        t=0,
+        save_path=f"{save_dir}/blocks_update_rank.pdf"
+    )
     
     for task in random_task_idxs:
         for block in range(n_blocks):
@@ -240,7 +247,7 @@ def main(
             imageio.mimsave(
                 f"{save_dir}/mean_tokens_alignment_block_{block}.gif", 
                 images, 
-                fps=2
+                fps=12
             )
 
             png_files = sorted(
@@ -252,7 +259,7 @@ def main(
             imageio.mimsave(
                 f"{save_dir}/mean_blocks_alignment.gif", 
                 images, 
-                fps=2
+                fps=12
             )
 
 
@@ -294,11 +301,11 @@ if __name__ == "__main__":
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_heads', type=int, default=1)
-    parser.add_argument('--n_blocks', type=int, default=5)
+    parser.add_argument('--n_blocks', type=int, default=2)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--use_layer_norm', type=bool, default=False)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
-    parser.add_argument('--n_steps', type=int, default=100)
+    parser.add_argument('--n_steps', type=int, default=1)
     parser.add_argument('--param_lr', type=float, default=1e-1)
     parser.add_argument('--sweep', type=bool, default=False, 
                         help="Run parameter sweeps instead of a single experiment")
