@@ -39,7 +39,7 @@ def main(
         use_layer_norm: bool,
         hidden_multiplier: int,
         n_steps: int,
-        param_lr: float,
+        lr: float,
         save_dir: str
 ):  
     n_embed = input_dim + 1
@@ -62,7 +62,7 @@ def main(
         use_layer_norm=use_layer_norm,
         hidden_multiplier=hidden_multiplier
     )
-    optim = optax.adam(param_lr)
+    optim = optax.adam(lr)
     opt_state = optim.init(eqx.filter(model, eqx.is_array))
     
     # --- metrics ---
@@ -306,12 +306,12 @@ if __name__ == "__main__":
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_heads', type=int, default=1)
-    parser.add_argument('--n_blocks', type=int, default=1)
+    parser.add_argument('--n_blocks', type=int, default=2)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--use_layer_norm', type=bool, default=False)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
-    parser.add_argument('--param_lr', type=float, default=1e-1)
+    parser.add_argument('--lr', type=float, default=1e-1)
     parser.add_argument('--sweep', type=bool, default=True, 
                         help="Run parameter sweeps instead of a single experiment")
     args = parser.parse_args()
@@ -322,7 +322,7 @@ if __name__ == "__main__":
         "seq_len": [50, 250, 1250],
         "input_dim": [2, 20],
         "n_heads": [1, 3],
-        "use_layer_norm": [False, True],
+        "use_layer_norm": [False, True]
     }
     
     if args.sweep:
@@ -340,7 +340,7 @@ if __name__ == "__main__":
             use_layer_norm=args.use_layer_norm,
             hidden_multiplier=args.hidden_multiplier,
             n_steps=args.n_steps,
-            param_lr=args.param_lr,
+            lr=args.lr,
             seed=args.seed
         )
         main(**vars(args))

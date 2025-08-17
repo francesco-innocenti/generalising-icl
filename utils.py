@@ -22,7 +22,7 @@ def get_save_dir(
         use_layer_norm,
         hidden_multiplier,
         n_steps,
-        param_lr,
+        lr,
         seed,
         print_config=True
 ):
@@ -40,7 +40,7 @@ def get_save_dir(
     Use layer norm: {use_layer_norm}
     Hidden multiplier: {hidden_multiplier}
     Training steps: {n_steps}
-    Param lr: {param_lr}
+    Learning rate: {lr}
     Seed: {seed}
     """
         )
@@ -56,7 +56,7 @@ def get_save_dir(
         "layer_norm" if use_layer_norm else "no_layer_norm",
         f"hidden_multiplier_{hidden_multiplier}",
         f"{n_steps}_steps",
-        f"param_lr_{param_lr}",
+        f"lr_{lr}",
         str(seed)
     )
     os.makedirs(save_dir, exist_ok=True)
