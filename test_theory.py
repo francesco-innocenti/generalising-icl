@@ -1,3 +1,4 @@
+import os
 import glob
 import argparse
 import numpy as np
@@ -24,7 +25,7 @@ from plotting import (
     plot_norms,
     plot_blocks_update_rank
 )
-import imageio
+import imageio.v2 as imageio
 
 
 def main(
@@ -43,6 +44,9 @@ def main(
 ):  
     n_embed = input_dim + 1
     assert n_embed % n_heads == 0
+    
+    alignment_steps_dir = f"{save_dir}/ΔWs_alignment_steps"
+    os.makedirs(alignment_steps_dir, exist_ok=True)
 
     set_seed(seed)
     key = jr.PRNGKey(seed)
@@ -138,48 +142,48 @@ def main(
         test_losses.append(test_loss)
         theory_test_losses.append(theory_test_loss)
 
-        if t % 20 == 0:
+        if t % 10 == 0:
             print(f"Step {t} | train loss: {train_loss:.4f} | test loss: {test_loss:.4f}") 
     
-        # --- alignment between token positions ---
-        t_str = f"{t:04d}"
-        for block in range(n_blocks):
-            ΔWs_tokens_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
-                ΔWs_steps[t, block]
-            )
-            plot_ΔWs_alignment(
-                ΔWs_tokens_alignment_all_tasks.mean(axis=0),
-                alignment_type="tokens",
-                save_path=f"{save_dir}/ΔWs_mean_tokens_alignment_t_{t_str}_block_{block}.png",
-                title=f"$t = {t}$"
-            )
-            for task in random_task_idxs:
-                ΔWs_tokens_alignment = compute_ΔWs_alignment(ΔWs_steps[t, block, task])
+            # --- alignment between token positions ---
+            t_str = f"{t:04d}"
+            for block in range(n_blocks):
+                ΔWs_tokens_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
+                    ΔWs_steps[t, block]
+                )
                 plot_ΔWs_alignment(
-                    ΔWs_tokens_alignment,
+                    ΔWs_tokens_alignment_all_tasks.mean(axis=0),
                     alignment_type="tokens",
-                    save_path=f"{save_dir}/ΔWs_tokens_alignment_t_{t}_block_{block}_task_{task}.png",
+                    save_path=f"{alignment_steps_dir}/ΔWs_mean_tokens_alignment_t_{t_str}_block_{block}.png",
                     title=f"$t = {t}$"
                 )
-        
-        # --- alignment between blocks (for last token) ---
-        ΔWs_blocks_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
-            ΔWs_steps[t, :, :, -1].reshape(n_tasks, n_blocks, -1)
-        )
-        plot_ΔWs_alignment(
-            ΔWs_blocks_alignment_all_tasks.mean(axis=0),
-            alignment_type="blocks",
-            save_path=f"{save_dir}/ΔWs_mean_blocks_alignment_t_{t_str}.png",
-            title=f"$t = {t}$"
-        ) 
-        for task in random_task_idxs:
-            ΔWs_blocks_alignment = compute_ΔWs_alignment(ΔWs_steps[t, :, task, -1])
+                for task in random_task_idxs:
+                    ΔWs_tokens_alignment = compute_ΔWs_alignment(ΔWs_steps[t, block, task])
+                    plot_ΔWs_alignment(
+                        ΔWs_tokens_alignment,
+                        alignment_type="tokens",
+                        save_path=f"{alignment_steps_dir}/ΔWs_tokens_alignment_t_{t}_block_{block}_task_{task}.png",
+                        title=f"$t = {t}$"
+                    )
+            
+            # --- alignment between blocks (for last token) ---
+            ΔWs_blocks_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
+                ΔWs_steps[t, :, :, -1].reshape(n_tasks, n_blocks, -1)
+            )
             plot_ΔWs_alignment(
-                ΔWs_blocks_alignment,
+                ΔWs_blocks_alignment_all_tasks.mean(axis=0),
                 alignment_type="blocks",
-                save_path=f"{save_dir}/ΔWs_blocks_alignment_t_{t}_task_{task}.png",
+                save_path=f"{alignment_steps_dir}/ΔWs_mean_blocks_alignment_t_{t_str}.png",
                 title=f"$t = {t}$"
-            )   
+            ) 
+            for task in random_task_idxs:
+                ΔWs_blocks_alignment = compute_ΔWs_alignment(ΔWs_steps[t, :, task, -1])
+                plot_ΔWs_alignment(
+                    ΔWs_blocks_alignment,
+                    alignment_type="blocks",
+                    save_path=f"{alignment_steps_dir}/ΔWs_blocks_alignment_t_{t}_task_{task}.png",
+                    title=f"$t = {t}$"
+                )   
   
     # --- saving ---
     np.save(f"{save_dir}/train_losses.npy", train_losses)
@@ -230,7 +234,7 @@ def main(
         f"{save_dir}/ΔWs_mean_spectral_norms.pdf",
         stds=ΔWs_spectral_norm.mean(axis=-1)
     )
-    for t in [0, n_steps]:
+    for t in [0, n_steps-1]:
         plot_blocks_update_rank(
             effective_updates_ranks,
             t=t,
@@ -241,26 +245,26 @@ def main(
         for block in range(n_blocks):
             png_files = sorted(
                 glob.glob(
-                    f"{save_dir}/ΔWs_mean_tokens_alignment_t_*_block_{block}.png"
+                    f"{alignment_steps_dir}/ΔWs_mean_tokens_alignment_t_*_block_{block}.png"
                 )
             )
             images = [imageio.imread(f) for f in png_files]
             imageio.mimsave(
                 f"{save_dir}/mean_tokens_alignment_block_{block}.gif", 
                 images, 
-                fps=12
+                fps=3
             )
 
             png_files = sorted(
                 glob.glob(
-                    f"{save_dir}/ΔWs_mean_blocks_alignment_t_*.png"
+                    f"{alignment_steps_dir}/ΔWs_mean_blocks_alignment_t_*.png"
                 )
             )
             images = [imageio.imread(f) for f in png_files]
             imageio.mimsave(
                 f"{save_dir}/mean_blocks_alignment.gif", 
                 images, 
-                fps=12
+                fps=3
             )
 
 
