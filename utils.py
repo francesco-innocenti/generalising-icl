@@ -3,7 +3,7 @@ import random
 import numpy as np
 
 from jax import vmap
-from jax.numpy.linalg import matrix_rank
+import jax.numpy as jnp
 
 
 def set_seed(seed):
@@ -74,9 +74,9 @@ def compute_ΔWs_alignment(ΔWs):
     iv = ΔWs.shape[0]
     ΔWs_flat = ΔWs.reshape(iv, -1)    # (m, hidden_dim * D)
     
-    norms = np.linalg.norm(ΔWs_flat, axis=1)  # (m,)
+    norms = jnp.linalg.norm(ΔWs_flat, axis=1)  # (m,)
     inner_prods = ΔWs_flat @ ΔWs_flat.T       # (m, m)
-    norm_matrix = np.outer(norms, norms)      # (m, m)
+    norm_matrix = jnp.outer(norms, norms)      # (m, m)
 
     # (m, m)
     normalised_frob = inner_prods / norm_matrix
@@ -87,5 +87,5 @@ def compute_ΔWs_alignment(ΔWs):
 
 def compute_effective_update_rank(ΔWs):
     ΔW_sequence_sum = ΔWs.sum(axis=1)  # (B, H, D)   
-    rank_per_b = vmap(matrix_rank)(ΔW_sequence_sum)
+    rank_per_b = vmap(jnp.linalg.matrix_rank)(ΔW_sequence_sum)
     return rank_per_b  # (B,)
