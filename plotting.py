@@ -43,11 +43,11 @@ def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
     plt.close("all")
 
 
-def plot_ΔWs_alignments(ΔWs_alignments, save_path, title=None):
-    N = len(ΔWs_alignments)-1
+def plot_ΔWs_alignment(ΔWs_alignment, alignment_type, save_path, title=None):
+    N = len(ΔWs_alignment) - 1
     fig, ax = plt.subplots(figsize=(5, 4), dpi=150)
     im = plt.imshow(
-        ΔWs_alignments, 
+        ΔWs_alignment, 
         vmin=-1, 
         vmax=1, 
         cmap="coolwarm", 
@@ -61,8 +61,14 @@ def plot_ΔWs_alignments(ΔWs_alignments, save_path, title=None):
     if title is not None:
         ax.set_title(title, fontsize=20, pad=12)
 
-    ax.set_ylabel("$\Delta W_i(C)$", fontsize=18)
-    ax.set_xlabel("$\Delta W_j(C)$", fontsize=18)
+    ylabel = "$\Delta W_i(C)$" if (
+        alignment_type == "tokens" 
+    ) else "$\Delta W_\ell(C)$"
+    xlabel = "$\Delta W_j(C)$" if (
+        alignment_type == "tokens" 
+    ) else "$\Delta W_k(C)$"
+    ax.set_ylabel(ylabel, fontsize=18)
+    ax.set_xlabel(xlabel, fontsize=18)
     
     ax.tick_params(
         axis="both", 
@@ -84,7 +90,7 @@ def plot_ΔWs_alignments(ΔWs_alignments, save_path, title=None):
     plt.close("all")
 
 
-def plot_norms(norms, norm_type, save_path):
+def plot_norms(norms, norm_type, save_path, stds=None):
     n_steps, n_blocks = norms.shape
     steps = [b+1 for b in range(n_steps)]
     y_axis_label = "$||\Delta W(C)||_F$" if (
@@ -98,6 +104,13 @@ def plot_norms(norms, norm_type, save_path):
             norms[:, block_idx], 
             label=f"block {block_idx+1}"
         )
+        if stds is not None:
+            ax.fill_between(
+                steps,
+                norms[:, block_idx] - stds[:, block_idx],
+                norms[:, block_idx] + stds[:, block_idx],
+                alpha=0.2
+            )
     
     ax.legend(fontsize=16)
     ax.set_xlabel("Training step", fontsize=18, labelpad=10)
