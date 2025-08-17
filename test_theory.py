@@ -287,7 +287,6 @@ def run_single_param_sweeps(base_args, sweeps: dict):
                 input_dim=args.input_dim,
                 n_heads=args.n_heads,
                 n_blocks=args.n_blocks,
-                block_idx_to_verify=args.block_idx_to_verify,
                 use_skips=args.use_skips,
                 use_layer_norm=args.use_layer_norm,
                 hidden_multiplier=args.hidden_multiplier,
@@ -306,13 +305,13 @@ if __name__ == "__main__":
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_heads', type=int, default=1)
-    parser.add_argument('--n_blocks', type=int, default=2)
+    parser.add_argument('--n_blocks', type=int, default=1)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--use_layer_norm', type=bool, default=False)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--param_lr', type=float, default=1e-1)
-    parser.add_argument('--sweep', type=bool, default=False, 
+    parser.add_argument('--sweep', type=bool, default=True, 
                         help="Run parameter sweeps instead of a single experiment")
     args = parser.parse_args()
     
