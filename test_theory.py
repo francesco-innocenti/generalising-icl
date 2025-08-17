@@ -292,7 +292,7 @@ def run_single_param_sweeps(base_args, sweeps: dict):
                 use_layer_norm=args.use_layer_norm,
                 hidden_multiplier=args.hidden_multiplier,
                 n_steps=args.n_steps,
-                param_lr=args.param_lr,
+                lr=args.lr,
                 seed=args.seed
             )
             main(**vars(args))
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_heads', type=int, default=1)
-    parser.add_argument('--n_blocks', type=int, default=2)
+    parser.add_argument('--n_blocks', type=int, default=1)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--use_layer_norm', type=bool, default=False)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
