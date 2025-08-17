@@ -274,6 +274,7 @@ def run_single_param_sweeps(base_args, sweeps: dict):
     Example:
         {"n_tasks": [16, 32, 64], "seq_len": [50, 250]}
     """
+    delattr(base_args, "sweep")
     for param, values in sweeps.items():
         print(f"\nRunning sweep for {param}")
         for v in values:
