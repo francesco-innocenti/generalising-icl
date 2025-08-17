@@ -14,12 +14,12 @@ def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
     n_steps = len(empirical_losses)
     steps = [b+1 for b in range(n_steps)]
     
-    fig, ax = plt.subplots(figsize=(4, 2), dpi=300) 
+    fig, ax = plt.subplots(figsize=(5, 3), dpi=300)  # 4, 2
     ax.plot(
         steps, 
         theory_losses, 
         label="theory", 
-        linewidth=4,
+        linewidth=3,
         linestyle="--",
         color="black"
     )
@@ -27,19 +27,19 @@ def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
         steps, 
         empirical_losses, 
         label="experiment", 
-        linewidth=2,
+        linewidth=1.5,
         linestyle="-",
         color="#636EFA"
     )
     
-    ax.legend(fontsize=16)
+    ax.legend(loc="best", fontsize=14)
     ax.set_xlabel("Training step", fontsize=18, labelpad=10)
     ax.set_ylabel("Test loss", fontsize=18, labelpad=10)
     ax.tick_params(axis="both", labelsize=14)
     plt.grid(True)
 
     plt.tight_layout()
-    fig.savefig(save_path)
+    fig.savefig(save_path, bbox_inches="tight")
     plt.close("all")
 
 
@@ -57,6 +57,18 @@ def plot_ΔWs_alignment(ΔWs_alignment, alignment_type, save_path, title=None):
     cbar.set_ticks([1, 0, -1])
     cbar.ax.tick_params(labelsize=20)
     cbar.set_label("Directional alignment", fontsize=18)
+    
+    if alignment_type == "blocks":
+        for i in range(len(ΔWs_alignment)):
+            for j in range(len(ΔWs_alignment)):
+                ax.text(
+                    j, i, 
+                    f"{ΔWs_alignment[i, j]:.2f}", 
+                    ha="center", 
+                    va="center", 
+                    color="black" if abs(ΔWs_alignment[i, j]) < 0.5 else "white", 
+                    fontsize=14
+                )
     
     if title is not None:
         ax.set_title(title, fontsize=20, pad=12)
@@ -86,7 +98,7 @@ def plot_ΔWs_alignment(ΔWs_alignment, alignment_type, save_path, title=None):
     ax.spines["right"].set_visible(False)
     
     plt.tight_layout()
-    fig.savefig(save_path)
+    fig.savefig(save_path, bbox_inches="tight")
     plt.close("all")
 
 
@@ -112,14 +124,14 @@ def plot_norms(norms, norm_type, save_path, stds=None):
                 alpha=0.2
             )
     
-    ax.legend(fontsize=16)
+    ax.legend(loc="best", fontsize=12)
     ax.set_xlabel("Training step", fontsize=18, labelpad=10)
     ax.set_ylabel(y_axis_label, fontsize=18, labelpad=10)
-    ax.tick_params(axis="both", labelsize=14)
+    ax.tick_params(axis="both", labelsize=16)
     plt.grid(True)
     
     plt.tight_layout()
-    plt.savefig(save_path)
+    plt.savefig(save_path, bbox_inches="tight")
     plt.close("all")
 
 
@@ -127,7 +139,7 @@ def plot_blocks_update_rank(ranks, t, save_path):
     n_blocks = ranks.shape[1]
     blocks = [i for i in range(1, n_blocks + 1)]
 
-    fig, ax = plt.subplots(figsize=(4, 3), dpi=300)
+    fig, ax = plt.subplots(figsize=(3, 3), dpi=300)
     ax.bar(
         blocks, 
         ranks[t, :].mean(axis=-1), 
@@ -136,7 +148,8 @@ def plot_blocks_update_rank(ranks, t, save_path):
         color="skyblue", 
         edgecolor="black"
     )
-
+    
+    ax.set_title(f"$t = {t}$", fontsize=20, pad=12)
     ax.set_xlabel("Block", fontsize=18)
     ax.set_ylabel(r"$\mathrm{rank}(\Delta W(C))$", fontsize=18)
 
@@ -150,5 +163,5 @@ def plot_blocks_update_rank(ranks, t, save_path):
     ax.yaxis.grid(True, linestyle="--", linewidth=0.7, alpha=0.7)
 
     plt.tight_layout()
-    fig.savefig(save_path)
+    fig.savefig(save_path, bbox_inches="tight")
     plt.close("all")
