@@ -20,13 +20,7 @@ from utils import (
     compute_ΔWs_alignment, 
     compute_effective_update_rank
 )
-from plotting import (
-    plot_empirical_vs_theory_losses, 
-    plot_ΔWs_alignment, 
-    plot_norms,
-    plot_blocks_update_rank
-)
-import imageio.v2 as imageio
+from plotting import plot_ΔWs_alignment, plot_metrics
 
 
 def main(
@@ -217,80 +211,32 @@ def main(
 
     np.save(f"{save_dir}/theory_preds_squared_diffs.npy", theory_preds_squared_diffs)
     np.save(f"{save_dir}/ΔWs_steps.npy", ΔWs_steps)
-    np.save(f"{save_dir}/effective_updates_ranks.npy", updates_ranks)
+    np.save(f"{save_dir}/updates_ranks.npy", updates_ranks)
     
-    # --- plotting ---
-    plot_empirical_vs_theory_losses(
-        test_losses,
-        theory_test_losses,
-        f"{save_dir}/test_losses.pdf"
-    )
-    
+    # --- compute norms ---
     ΔWs_task_last_token = ΔWs_steps[:, :, :, -1]
     ΔWs_frob_norms = jnp.linalg.norm(                       # (T, L, B)   
         ΔWs_task_last_token, 
         ord="fro", 
         axis=(-2, -1)
     )
-    ΔWs_spectral_norm = jnp.linalg.svd(
+    ΔWs_spectral_norms = jnp.linalg.svd(
         ΔWs_task_last_token, compute_uv=False)[:, :, :, 0]  # (T, L, B)  
     
-    for task in random_task_idxs:
-        plot_norms(
-            ΔWs_frob_norms[:, :, task], 
-            "frob", 
-            f"{save_dir}/ΔWs_frob_norms_task_{task}.pdf"
-        )
-        plot_norms(
-            ΔWs_spectral_norm[:, :, task], 
-            "spectral", 
-            f"{save_dir}/ΔWs_spectral_norms_task_{task}.pdf"
-        )
-        
-    plot_norms(
-        ΔWs_frob_norms.mean(axis=-1), 
-        "frob", 
-        f"{save_dir}/ΔWs_mean_frob_norms.pdf",
-        stds=ΔWs_frob_norms.std(axis=-1)
+    # --- plotting ---
+    metrics = {
+        "test_losses": test_losses,
+        "theory_test_losses": theory_test_losses,
+        "ΔWs_frob_norms": ΔWs_frob_norms,
+        "ΔWs_spectral_norms": ΔWs_spectral_norms,
+        "updates_ranks": updates_ranks
+    }
+    plot_metrics(
+        metrics, 
+        random_task_idxs, 
+        save_dir, 
+        alignment_steps_dir
     )
-    plot_norms(
-        ΔWs_spectral_norm.mean(axis=-1), 
-        "spectral", 
-        f"{save_dir}/ΔWs_mean_spectral_norms.pdf",
-        stds=ΔWs_spectral_norm.mean(axis=-1)
-    )
-    for t in [0, n_steps-1]:
-        plot_blocks_update_rank(
-            updates_ranks,
-            t=t,
-            save_path=f"{save_dir}/blocks_update_rank_t_{t}.pdf"
-        )
-    
-    for task in random_task_idxs:
-        for block in range(n_blocks):
-            png_files = sorted(
-                glob.glob(
-                    f"{alignment_steps_dir}/ΔWs_mean_tokens_alignment_t_*_block_{block}.png"
-                )
-            )
-            images = [imageio.imread(f) for f in png_files]
-            imageio.mimsave(
-                f"{save_dir}/mean_tokens_alignment_block_{block}.gif", 
-                images, 
-                fps=3
-            )
-
-            png_files = sorted(
-                glob.glob(
-                    f"{alignment_steps_dir}/ΔWs_mean_blocks_alignment_t_*.png"
-                )
-            )
-            images = [imageio.imread(f) for f in png_files]
-            imageio.mimsave(
-                f"{save_dir}/mean_blocks_alignment.gif", 
-                images, 
-                fps=3
-            )
 
 
 def run_single_param_sweeps(base_args, sweeps: dict):

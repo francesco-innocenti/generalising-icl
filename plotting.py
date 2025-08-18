@@ -1,5 +1,7 @@
+import glob
 import numpy as np
 import matplotlib.pyplot as plt
+import imageio.v2 as imageio
 
 
 plt.rcParams.update({
@@ -165,3 +167,79 @@ def plot_blocks_update_rank(ranks, t, save_path):
     plt.tight_layout()
     fig.savefig(save_path, bbox_inches="tight")
     plt.close("all")
+
+
+def plot_metrics(metrics, random_task_idxs, save_dir, alignment_steps_dir):
+    
+    # --- losses ---
+    plot_empirical_vs_theory_losses(
+        metrics["test_losses"],
+        metrics["theory_test_losses"],
+        f"{save_dir}/test_losses.pdf"
+    )
+    
+    # --- norms ---
+    ΔWs_frob_norms = metrics["ΔWs_frob_norms"]
+    ΔWs_spectral_norms = metrics["ΔWs_spectral_norms"]
+    n_steps = ΔWs_frob_norms.shape[0]
+    n_blocks = ΔWs_frob_norms.shape[1]
+        
+    for task in random_task_idxs:
+        plot_norms(
+            ΔWs_frob_norms[:, :, task], 
+            "frob", 
+            f"{save_dir}/ΔWs_frob_norms_task_{task}.pdf"
+        )
+        plot_norms(
+            ΔWs_spectral_norms[:, :, task], 
+            "spectral", 
+            f"{save_dir}/ΔWs_spectral_norms_task_{task}.pdf"
+        )
+        
+    plot_norms(
+        ΔWs_frob_norms.mean(axis=-1), 
+        "frob", 
+        f"{save_dir}/ΔWs_mean_frob_norms.pdf",
+        stds=ΔWs_frob_norms.std(axis=-1)
+    )
+    plot_norms(
+        ΔWs_spectral_norms.mean(axis=-1), 
+        "spectral", 
+        f"{save_dir}/ΔWs_mean_spectral_norms.pdf",
+        stds=ΔWs_spectral_norms.mean(axis=-1)
+    )
+
+    # --- updates' rank ---
+    for t in [0, n_steps - 1]:
+        plot_blocks_update_rank(
+            metrics["updates_ranks"],
+            t=t,
+            save_path=f"{save_dir}/blocks_update_rank_t_{t}.pdf"
+        )
+    
+    # --- updates' alignment ---
+    for task in random_task_idxs:
+        for block in range(n_blocks):
+            save_path = (
+                f"{alignment_steps_dir}/ΔWs_mean_tokens_alignment_"
+                f"t_*_block_{block}.png"
+            )
+            png_files = sorted(glob.glob(save_path))
+            images = [imageio.imread(f) for f in png_files]
+            imageio.mimsave(
+                f"{save_dir}/mean_tokens_alignment_block_{block}.gif", 
+                images, 
+                fps=3
+            )
+
+            png_files = sorted(
+                glob.glob(
+                    f"{alignment_steps_dir}/ΔWs_mean_blocks_alignment_t_*.png"
+                )
+            )
+            images = [imageio.imread(f) for f in png_files]
+            imageio.mimsave(
+                f"{save_dir}/mean_blocks_alignment.gif", 
+                images, 
+                fps=3
+            )
