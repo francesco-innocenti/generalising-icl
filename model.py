@@ -111,8 +111,9 @@ class Transformer(eqx.Module):
 
 
 @eqx.filter_jit
-def forward(model, x):
-    return model(x)
+def forward(model, x, return_activations=False):
+    return model(x, return_activations=return_activations)
+    
     
 @eqx.filter_value_and_grad
 def loss_fn(model, x, y):

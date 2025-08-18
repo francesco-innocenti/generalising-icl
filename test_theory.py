@@ -10,9 +10,13 @@ import equinox as eqx
 import optax
 
 from data import generate_linear_tasks
-from model import Transformer, train_step, compute_vectorised_theory_preds
 from analytical import compute_icl_updates
-
+from model import (
+    Transformer, 
+    forward, 
+    train_step, 
+    compute_vectorised_theory_preds
+)
 from utils import (
     set_seed, 
     get_save_dir,
@@ -94,7 +98,7 @@ def main(
         )
 
         # --- test empirical vs theory preds ---
-        preds, block_preds = model.forward(C_x_test, return_activations=True)
+        preds, block_preds = forward(model, C_x_test, return_activations=True)
         test_loss = 0.5 * jnp.mean((y_test - preds) ** 2)
 
         all_new_C_x_test = [C_x_test] + block_preds
