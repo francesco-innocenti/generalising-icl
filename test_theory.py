@@ -71,9 +71,10 @@ def main(
     theory_preds_squared_diffs = np.zeros((n_steps, n_blocks))
     
     ΔWs_steps = np.zeros(
-        (n_steps, n_blocks, n_tasks, seq_len+1, hidden_multiplier * n_embed, n_embed)
+        (n_steps, n_blocks, n_tasks, seq_len+1, 
+         hidden_multiplier * n_embed, n_embed)
     )
-    effective_updates_ranks = np.zeros((n_steps, n_blocks, n_tasks))
+    updates_ranks = np.zeros((n_steps, n_blocks, n_tasks))
     random_task_idxs = np.random.choice(
         np.arange(0, n_tasks), 
         size=3 if n_tasks >= 3 else 1,
@@ -98,7 +99,7 @@ def main(
             key=step_test_key
         )
 
-        # --- empirical vs theory test preds ---
+        # --- test empirical vs theory preds ---
         preds, block_preds = model(C_x_test, return_activations=True)
         test_loss = 0.5 * jnp.mean((y_test - preds) ** 2)
 
@@ -115,7 +116,7 @@ def main(
                 use_skips=use_skips
             )
             ΔWs_steps[t, block_idx] = ΔWs
-            effective_updates_ranks[t, block_idx] = compute_effective_update_rank(ΔWs)
+            updates_ranks[t, block_idx] = compute_effective_update_rank(ΔWs)
 
             theory_block_preds = compute_vectorised_theory_preds(
                 base_model=model, 
@@ -144,45 +145,68 @@ def main(
         theory_test_losses.append(theory_test_loss)
 
         if t % 10 == 0:
-            print(f"Step {t} | train loss: {train_loss:.4f} | test loss: {test_loss:.4f}") 
+            print(
+                f"Step {t} | train loss: {train_loss:.4f} | "
+                f"test loss: {test_loss:.4f}"
+            ) 
     
-            # --- alignment between token positions ---
+            # --- plot alignment between token positions (for all blocks) ---
             t_str = f"{t:04d}"
             for block in range(n_blocks):
                 ΔWs_tokens_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
                     ΔWs_steps[t, block]
                 )
+                save_path = (
+                    f"{alignment_steps_dir}/ΔWs_mean_tokens_alignment_"
+                    f"t_{t_str}_block_{block}.png"
+                )
                 plot_ΔWs_alignment(
                     ΔWs_tokens_alignment_all_tasks.mean(axis=0),
                     alignment_type="tokens",
-                    save_path=f"{alignment_steps_dir}/ΔWs_mean_tokens_alignment_t_{t_str}_block_{block}.png",
+                    save_path=save_path,
                     title=f"$t = {t}$"
                 )
                 for task in random_task_idxs:
-                    ΔWs_tokens_alignment = compute_ΔWs_alignment(ΔWs_steps[t, block, task])
+                    ΔWs_tokens_alignment = compute_ΔWs_alignment(
+                        ΔWs_steps[t, block, task]
+                    )
+                    save_path = (
+                        f"{alignment_steps_dir}/ΔWs_tokens_alignment_"
+                        f"t_{t}_block_{block}_task_{task}.png"
+                    )
                     plot_ΔWs_alignment(
                         ΔWs_tokens_alignment,
                         alignment_type="tokens",
-                        save_path=f"{alignment_steps_dir}/ΔWs_tokens_alignment_t_{t}_block_{block}_task_{task}.png",
+                        save_path=save_path,
                         title=f"$t = {t}$"
                     )
             
-            # --- alignment between blocks (for last token) ---
+            # --- plot alignment between blocks (for last token) ---
             ΔWs_blocks_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
                 ΔWs_steps[t, :, :, -1].reshape(n_tasks, n_blocks, -1)
+            )
+            save_path = (
+                f"{alignment_steps_dir}/ΔWs_mean_blocks_alignment_"
+                f"t_{t_str}.png"
             )
             plot_ΔWs_alignment(
                 ΔWs_blocks_alignment_all_tasks.mean(axis=0),
                 alignment_type="blocks",
-                save_path=f"{alignment_steps_dir}/ΔWs_mean_blocks_alignment_t_{t_str}.png",
+                save_path=save_path,
                 title=f"$t = {t}$"
             ) 
             for task in random_task_idxs:
-                ΔWs_blocks_alignment = compute_ΔWs_alignment(ΔWs_steps[t, :, task, -1])
+                ΔWs_blocks_alignment = compute_ΔWs_alignment(
+                    ΔWs_steps[t, :, task, -1]
+                )
+                save_path = (
+                    f"{alignment_steps_dir}/ΔWs_blocks_alignment_"
+                    f"t_{t}_task_{task}.png"
+                )
                 plot_ΔWs_alignment(
                     ΔWs_blocks_alignment,
                     alignment_type="blocks",
-                    save_path=f"{alignment_steps_dir}/ΔWs_blocks_alignment_t_{t}_task_{task}.png",
+                    save_path=save_path,
                     title=f"$t = {t}$"
                 )   
   
@@ -193,7 +217,7 @@ def main(
 
     np.save(f"{save_dir}/theory_preds_squared_diffs.npy", theory_preds_squared_diffs)
     np.save(f"{save_dir}/ΔWs_steps.npy", ΔWs_steps)
-    np.save(f"{save_dir}/effective_updates_ranks.npy", effective_updates_ranks)
+    np.save(f"{save_dir}/effective_updates_ranks.npy", updates_ranks)
     
     # --- plotting ---
     plot_empirical_vs_theory_losses(
@@ -318,7 +342,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     sweeps = {
-        "n_tasks": [2**i for i in range(3, 14)],
+        "n_tasks": [2**i for i in range(3, 13)],
         "seq_len": [50, 250, 1250],
         "input_dim": [2, 20],
         "n_heads": [1, 3],
