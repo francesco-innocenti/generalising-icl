@@ -1,5 +1,4 @@
 import os
-import glob
 import argparse
 import numpy as np
 
@@ -151,26 +150,13 @@ def main(
             # --- plot alignment between token positions (for all blocks) ---
             t_str = f"{t:04d}"
             for block in range(n_blocks):
-                ΔWs_tokens_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
-                    ΔWs_steps[t, block]
-                )
-                save_path = (
-                    f"{alignment_steps_dir}/ΔWs_mean_tokens_alignment_"
-                    f"t_{t_str}_block_{block}.png"
-                )
-                plot_ΔWs_alignment(
-                    ΔWs_tokens_alignment_all_tasks.mean(axis=0),
-                    alignment_between="tokens",
-                    save_path=save_path,
-                    title=f"$t = {t}$"
-                )
                 for task in random_task_idxs:
                     ΔWs_tokens_alignment = compute_ΔWs_alignment(
                         ΔWs_steps[t, block, task]
                     )
                     save_path = (
                         f"{alignment_steps_dir}/ΔWs_tokens_alignment_"
-                        f"t_{t}_block_{block}_task_{task}.png"
+                        f"t_{t_str}_block_{block}_task_{task}.png"
                     )
                     plot_ΔWs_alignment(
                         ΔWs_tokens_alignment,
@@ -180,26 +166,13 @@ def main(
                     )
             
             # --- plot alignment between blocks (for last token) ---
-            ΔWs_blocks_alignment_all_tasks = vmap(compute_ΔWs_alignment)(
-                ΔWs_steps[t, :, :, -1].reshape(n_tasks, n_blocks, -1)
-            )
-            save_path = (
-                f"{alignment_steps_dir}/ΔWs_mean_blocks_alignment_"
-                f"t_{t_str}.png"
-            )
-            plot_ΔWs_alignment(
-                ΔWs_blocks_alignment_all_tasks.mean(axis=0),
-                alignment_between="blocks",
-                save_path=save_path,
-                title=f"$t = {t}$"
-            ) 
             for task in random_task_idxs:
                 ΔWs_blocks_alignment = compute_ΔWs_alignment(
                     ΔWs_steps[t, :, task, -1]
                 )
                 save_path = (
                     f"{alignment_steps_dir}/ΔWs_blocks_alignment_"
-                    f"t_{t}_task_{task}.png"
+                    f"t_{t_str}_task_{task}.png"
                 )
                 plot_ΔWs_alignment(
                     ΔWs_blocks_alignment,
@@ -292,8 +265,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     sweeps = {
-        "n_tasks": [2**i for i in range(3, 13)],
-        "seq_len": [50, 250, 1250],
+        "n_tasks": [2**i for i in range(4, 13)],
+        "seq_len": [50, 100, 1000],
         "input_dim": [2, 20],
         "n_heads": [1, 3],
         "use_layer_norm": [False, True]

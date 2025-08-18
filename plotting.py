@@ -178,7 +178,7 @@ def plot_metrics(metrics, random_task_idxs, save_dir, alignment_steps_dir):
         f"{save_dir}/test_losses.pdf"
     )
     
-    # --- norms ---
+    # --- updates' norms & alignment ---
     ΔWs_frob_norms = metrics["ΔWs_frob_norms"]
     ΔWs_spectral_norms = metrics["ΔWs_spectral_norms"]
     n_steps = ΔWs_frob_norms.shape[0]
@@ -195,20 +195,32 @@ def plot_metrics(metrics, random_task_idxs, save_dir, alignment_steps_dir):
             "spectral", 
             f"{save_dir}/ΔWs_spectral_norms_task_{task}.pdf"
         )
-        
-    plot_norms(
-        ΔWs_frob_norms.mean(axis=-1), 
-        "frob", 
-        f"{save_dir}/ΔWs_mean_frob_norms.pdf",
-        stds=ΔWs_frob_norms.std(axis=-1)
-    )
-    plot_norms(
-        ΔWs_spectral_norms.mean(axis=-1), 
-        "spectral", 
-        f"{save_dir}/ΔWs_mean_spectral_norms.pdf",
-        stds=ΔWs_spectral_norms.mean(axis=-1)
-    )
 
+        for block in range(n_blocks):
+            save_path = (
+                f"{alignment_steps_dir}/ΔWs_tokens_alignment_"
+                f"t_*_block_{block}_task_{task}.png"
+            )
+            png_files = sorted(glob.glob(save_path))
+            images = [imageio.imread(f) for f in png_files]
+            imageio.mimsave(
+                f"{save_dir}/tokens_alignment_block_{block}_task_{task}.gif", 
+                images, 
+                fps=3
+            )
+            
+            save_path = (
+                f"{alignment_steps_dir}/ΔWs_blocks_alignment_"
+                f"t_*_task_{task}.png"
+            )
+            png_files = sorted(glob.glob(save_path))
+            images = [imageio.imread(f) for f in png_files]
+            imageio.mimsave(
+                f"{save_dir}/blocks_alignment_task_{task}.gif", 
+                images, 
+                fps=3
+            )
+        
     # --- updates' rank ---
     for t in [0, n_steps - 1]:
         plot_blocks_update_rank(
@@ -216,30 +228,3 @@ def plot_metrics(metrics, random_task_idxs, save_dir, alignment_steps_dir):
             t=t,
             save_path=f"{save_dir}/blocks_update_rank_t_{t}.pdf"
         )
-    
-    # --- updates' alignment ---
-    for task in random_task_idxs:
-        for block in range(n_blocks):
-            save_path = (
-                f"{alignment_steps_dir}/ΔWs_mean_tokens_alignment_"
-                f"t_*_block_{block}.png"
-            )
-            png_files = sorted(glob.glob(save_path))
-            images = [imageio.imread(f) for f in png_files]
-            imageio.mimsave(
-                f"{save_dir}/mean_tokens_alignment_block_{block}.gif", 
-                images, 
-                fps=3
-            )
-
-            png_files = sorted(
-                glob.glob(
-                    f"{alignment_steps_dir}/ΔWs_mean_blocks_alignment_t_*.png"
-                )
-            )
-            images = [imageio.imread(f) for f in png_files]
-            imageio.mimsave(
-                f"{save_dir}/mean_blocks_alignment.gif", 
-                images, 
-                fps=3
-            )
