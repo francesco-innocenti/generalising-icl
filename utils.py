@@ -30,7 +30,7 @@ def get_save_dir(
     if print_config:
         print(
             f"""
-    Starting experiment with config:
+Starting experiment with config:
 
     N tasks: {n_tasks}
     Sequence length: {seq_len}
