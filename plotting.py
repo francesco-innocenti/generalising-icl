@@ -1,7 +1,5 @@
-import glob
 import numpy as np
 import matplotlib.pyplot as plt
-import imageio.v2 as imageio
 
 
 plt.rcParams.update({
@@ -104,27 +102,26 @@ def plot_ΔWs_alignment(ΔWs_alignment, alignment_between, save_path, title=None
     plt.close("all")
 
 
-def plot_norms(norms, norm_type, save_path, stds=None):
-    n_steps, n_blocks = norms.shape
+def plot_blocks_ΔW_norms(mean_norms, std_norms, norm_type, save_path):
+    n_steps, n_blocks = mean_norms.shape
     steps = [b+1 for b in range(n_steps)]
-    y_axis_label = "$||\Delta W(C)||_F$" if (
+    y_axis_label = "$||\Delta W(C)_{(N+1)}||_F$" if (
         norm_type == "frob" 
-    ) else "$||\Delta W(C)||_2$"
+    ) else "$||\Delta W(C)_{(N+1)}||_2$"
     
     _, ax = plt.subplots(figsize=(6, 3), dpi=300) 
     for block_idx in range(n_blocks):
         ax.plot(
             steps, 
-            norms[:, block_idx], 
+            mean_norms[:, block_idx], 
             label=f"block {block_idx+1}"
         )
-        if stds is not None:
-            ax.fill_between(
-                steps,
-                norms[:, block_idx] - stds[:, block_idx],
-                norms[:, block_idx] + stds[:, block_idx],
-                alpha=0.2
-            )
+        ax.fill_between(
+            steps,
+            np.maximum(0, mean_norms[:, block_idx] - std_norms[:, block_idx]),
+            mean_norms[:, block_idx] + std_norms[:, block_idx],
+            alpha=0.2
+        )
     
     ax.legend(loc="best", fontsize=12)
     ax.set_xlabel("Training step", fontsize=18, labelpad=10)
@@ -137,15 +134,15 @@ def plot_norms(norms, norm_type, save_path, stds=None):
     plt.close("all")
 
 
-def plot_blocks_update_rank(ranks, t, save_path):
-    n_blocks = ranks.shape[1]
+def plot_blocks_ΔW_rank(mean_ranks, std_ranks, t, save_path):
+    n_blocks = mean_ranks.shape[1]
     blocks = [i for i in range(1, n_blocks + 1)]
 
-    fig, ax = plt.subplots(figsize=(3, 3), dpi=300)
+    fig, ax = plt.subplots(figsize=(3, 4), dpi=300)
     ax.bar(
         blocks, 
-        ranks[t, :].mean(axis=-1), 
-        yerr=ranks[t, :].std(axis=-1), 
+        mean_ranks[t], 
+        yerr=std_ranks[t], 
         capsize=10, 
         color="skyblue", 
         edgecolor="black"
@@ -153,7 +150,7 @@ def plot_blocks_update_rank(ranks, t, save_path):
     
     ax.set_title(f"$t = {t}$", fontsize=20, pad=12)
     ax.set_xlabel("Block", fontsize=18)
-    ax.set_ylabel(r"$\mathrm{rank}(\Delta W(C))$", fontsize=18)
+    ax.set_ylabel(r"$\mathrm{rank}(\sum_i\Delta W_i(C))$", fontsize=18)
 
     ax.set_xticks(blocks)
     ax.set_yticks([0, 1])
@@ -169,7 +166,7 @@ def plot_blocks_update_rank(ranks, t, save_path):
     plt.close("all")
 
 
-def plot_metrics(metrics, random_task_idxs, save_dir, alignment_steps_dir):
+def plot_metrics(metrics, save_dir):
     
     # --- losses ---
     plot_empirical_vs_theory_losses(
@@ -178,53 +175,30 @@ def plot_metrics(metrics, random_task_idxs, save_dir, alignment_steps_dir):
         f"{save_dir}/test_losses.pdf"
     )
     
-    # --- updates' norms & alignment ---
+    # --- updates' norms ---
     ΔWs_frob_norms = metrics["ΔWs_frob_norms"]
     ΔWs_spectral_norms = metrics["ΔWs_spectral_norms"]
     n_steps = ΔWs_frob_norms.shape[0]
-    n_blocks = ΔWs_frob_norms.shape[1]
-        
-    for task in random_task_idxs:
-        plot_norms(
-            ΔWs_frob_norms[:, :, task], 
-            "frob", 
-            f"{save_dir}/ΔWs_frob_norms_task_{task}.pdf"
-        )
-        plot_norms(
-            ΔWs_spectral_norms[:, :, task], 
-            "spectral", 
-            f"{save_dir}/ΔWs_spectral_norms_task_{task}.pdf"
-        )
 
-        for block in range(n_blocks):
-            save_path = (
-                f"{alignment_steps_dir}/ΔWs_tokens_alignment_"
-                f"t_*_block_{block}_task_{task}.png"
-            )
-            png_files = sorted(glob.glob(save_path))
-            images = [imageio.imread(f) for f in png_files]
-            imageio.mimsave(
-                f"{save_dir}/tokens_alignment_block_{block}_task_{task}.gif", 
-                images, 
-                fps=3
-            )
-            
-            save_path = (
-                f"{alignment_steps_dir}/ΔWs_blocks_alignment_"
-                f"t_*_task_{task}.png"
-            )
-            png_files = sorted(glob.glob(save_path))
-            images = [imageio.imread(f) for f in png_files]
-            imageio.mimsave(
-                f"{save_dir}/blocks_alignment_task_{task}.gif", 
-                images, 
-                fps=3
-            )
+    plot_blocks_ΔW_norms(
+        mean_norms=ΔWs_frob_norms.mean(axis=-1), 
+        std_norms=ΔWs_frob_norms.std(axis=-1),
+        norm_type="frob", 
+        save_path=f"{save_dir}/blocks_ΔW_frob_norms.pdf"
+    )
+    plot_blocks_ΔW_norms(
+        mean_norms=ΔWs_spectral_norms.mean(axis=-1), 
+        std_norms=ΔWs_spectral_norms.std(axis=-1),
+        norm_type="spectral", 
+        save_path=f"{save_dir}/blocks_ΔW_spectral_norms.pdf"
+    )
         
     # --- updates' rank ---
+    updates_ranks = metrics["updates_ranks"]
     for t in [0, n_steps - 1]:
-        plot_blocks_update_rank(
-            metrics["updates_ranks"],
+        plot_blocks_ΔW_rank(
+            mean_ranks=updates_ranks.mean(axis=-1),
+            std_ranks=updates_ranks.std(axis=-1),
             t=t,
-            save_path=f"{save_dir}/blocks_update_rank_t_{t}.pdf"
+            save_path=f"{save_dir}/blocks_ΔW_rank_t_{t}.pdf"
         )

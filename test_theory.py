@@ -2,7 +2,6 @@ import os
 import argparse
 import numpy as np
 
-from jax import vmap
 import jax.random as jr
 import jax.numpy as jnp
 import equinox as eqx
@@ -43,8 +42,8 @@ def main(
     n_embed = input_dim + 1
     assert n_embed % n_heads == 0
     
-    alignment_steps_dir = f"{save_dir}/ΔWs_alignment_steps"
-    os.makedirs(alignment_steps_dir, exist_ok=True)
+    alignments_dir = f"{save_dir}/ΔWs_alignments"
+    os.makedirs(alignments_dir, exist_ok=True)
 
     set_seed(seed)
     key = jr.PRNGKey(seed)
@@ -155,8 +154,8 @@ def main(
                         ΔWs_steps[t, block, task]
                     )
                     save_path = (
-                        f"{alignment_steps_dir}/ΔWs_tokens_alignment_"
-                        f"t_{t_str}_block_{block}_task_{task}.png"
+                        f"{alignments_dir}/ΔWs_tokens_alignment_"
+                        f"t_{t_str}_block_{block}_task_{task}.pdf"
                     )
                     plot_ΔWs_alignment(
                         ΔWs_tokens_alignment,
@@ -171,8 +170,8 @@ def main(
                     ΔWs_steps[t, :, task, -1]
                 )
                 save_path = (
-                    f"{alignment_steps_dir}/ΔWs_blocks_alignment_"
-                    f"t_{t_str}_task_{task}.png"
+                    f"{alignments_dir}/ΔWs_blocks_alignment_"
+                    f"t_{t_str}_task_{task}.pdf"
                 )
                 plot_ΔWs_alignment(
                     ΔWs_blocks_alignment,
@@ -208,12 +207,7 @@ def main(
         "ΔWs_spectral_norms": ΔWs_spectral_norms,
         "updates_ranks": updates_ranks
     }
-    plot_metrics(
-        metrics, 
-        random_task_idxs, 
-        save_dir, 
-        alignment_steps_dir
-    )
+    plot_metrics(metrics, save_dir)
 
 
 def run_single_param_sweeps(base_args, sweeps: dict):
@@ -222,7 +216,7 @@ def run_single_param_sweeps(base_args, sweeps: dict):
     Example:
         {"n_tasks": [16, 32, 64], "seq_len": [50, 250]}
     """
-    delattr(base_args, "sweep")
+    delattr(base_args, "blocks_analysis")
     for param, values in sweeps.items():
         print(f"\nRunning sweep for {param}")
         for v in values:
@@ -254,14 +248,13 @@ if __name__ == "__main__":
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_heads', type=int, default=1)
-    parser.add_argument('--n_blocks', type=int, default=1)
+    parser.add_argument('--n_blocks', type=int, default=5)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--use_layer_norm', type=bool, default=False)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--lr', type=float, default=1e-1)
-    parser.add_argument('--sweep', type=bool, default=False, 
-                        help="Run parameter sweeps instead of a single experiment")
+    parser.add_argument('--blocks_analysis', type=bool, default=False)
     args = parser.parse_args()
     
     sweeps = {
@@ -273,13 +266,16 @@ if __name__ == "__main__":
     }
     args.lr = get_lr(args.n_blocks)
     
-    if args.sweep:
+    if args.blocks_analysis:
         args.use_skips = True
         args.hidden_multiplier = 4
         args.n_steps = 100
-        run_single_param_sweeps(args, sweeps)
+        blocks = [1, 3, 5]
+        for n_blocks in blocks:
+            args.n_blocks = n_blocks
+            run_single_param_sweeps(args, sweeps)
     else:
-        delattr(args, "sweep")
+        delattr(args, "blocks_analysis")
         args.save_dir = get_save_dir(
             save_dir=args.save_dir,
             n_tasks=args.n_tasks,
