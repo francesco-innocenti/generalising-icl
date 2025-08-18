@@ -108,7 +108,11 @@ class Transformer(eqx.Module):
         
         out = x[:, -1, -1]
         return (out, activations) if return_activations else out
-    
+
+
+@eqx.filter_jit
+def forward(model, x):
+    return model(x)
     
 @eqx.filter_value_and_grad
 def loss_fn(model, x, y):
@@ -124,6 +128,7 @@ def train_step(model, opt_state, x, y, optim):
     return model, opt_state, loss
 
 
+@eqx.filter_jit
 def apply_icl_updates(model, ΔW, Δb, block_idx=0):
     """
     Applies updates to the first MLP layer and second bias of a transformer block.

@@ -94,7 +94,7 @@ def main(
         )
 
         # --- test empirical vs theory preds ---
-        preds, block_preds = model(C_x_test, return_activations=True)
+        preds, block_preds = model.forward(C_x_test, return_activations=True)
         test_loss = 0.5 * jnp.mean((y_test - preds) ** 2)
 
         all_new_C_x_test = [C_x_test] + block_preds
@@ -277,13 +277,13 @@ if __name__ == "__main__":
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_heads', type=int, default=1)
-    parser.add_argument('--n_blocks', type=int, default=5)
+    parser.add_argument('--n_blocks', type=int, default=1)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--use_layer_norm', type=bool, default=False)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--lr', type=float, default=1e-1)
-    parser.add_argument('--sweep', type=bool, default=True, 
+    parser.add_argument('--sweep', type=bool, default=False, 
                         help="Run parameter sweeps instead of a single experiment")
     args = parser.parse_args()
     

@@ -4,6 +4,7 @@ import numpy as np
 
 from jax import vmap
 import jax.numpy as jnp
+from equinox import filter_jit
 
 
 def set_seed(seed):
@@ -67,6 +68,7 @@ def get_lr(n_blocks):
     return 1e-1 if n_blocks <= 2 else 5e-2
 
 
+@filter_jit
 def compute_ΔWs_alignment(ΔWs):
     """Computes the normalised Frobenius inner product between ΔW.
 
@@ -89,6 +91,7 @@ def compute_ΔWs_alignment(ΔWs):
     return normalised_frob
 
 
+@filter_jit
 def compute_effective_update_rank(ΔWs):
     ΔW_sequence_sum = ΔWs.sum(axis=1)  # (B, H, D)   
     rank_per_batch = vmap(jnp.linalg.matrix_rank)(ΔW_sequence_sum)

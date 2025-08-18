@@ -1,10 +1,12 @@
 import jax.numpy as jnp
 import jax.random as jr
+from equinox import filter_jit
 from typing import Tuple, TypeAlias
 
 Array: TypeAlias = jnp.ndarray
 
 
+@filter_jit
 def generate_linear_tasks(
         n_tasks: int, 
         seq_len: int, 
