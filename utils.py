@@ -63,6 +63,10 @@ def get_save_dir(
     return save_dir
 
 
+def get_lr(n_blocks):
+    return 1e-1 if n_blocks <= 2 else 5e-2
+
+
 def compute_ΔWs_alignment(ΔWs):
     """Computes the normalised Frobenius inner product between ΔW.
 
