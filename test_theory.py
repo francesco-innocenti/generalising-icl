@@ -216,12 +216,12 @@ def run_single_param_sweeps(base_args, sweeps: dict):
     Example:
         {"n_tasks": [16, 32, 64], "seq_len": [50, 250]}
     """
-    delattr(base_args, "blocks_analysis")
     for param, values in sweeps.items():
         print(f"\nRunning sweep for {param}")
         for v in values:
             args = argparse.Namespace(**vars(base_args))
             setattr(args, param, v)
+            delattr(args, "blocks_analysis")
 
             args.save_dir = get_save_dir(
                 save_dir=base_args.save_dir,
@@ -254,28 +254,32 @@ if __name__ == "__main__":
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--lr', type=float, default=1e-1)
-    parser.add_argument('--blocks_analysis', type=bool, default=False)
+    parser.add_argument('--blocks_analysis', type=bool, default=True)
     args = parser.parse_args()
     
-    sweeps = {
-        "n_tasks": [2**i for i in range(4, 13)],
-        "seq_len": [50, 100, 1000],
-        "input_dim": [2, 20],
-        "n_heads": [1, 3],
-        "use_layer_norm": [False, True]
-    }
-    args.lr = get_lr(args.n_blocks)
-    
     if args.blocks_analysis:
+        
+        sweeps = {
+            "n_tasks": [2**i for i in range(4, 13)],
+            "seq_len": [50, 100, 1000],
+            "input_dim": [2, 20],
+            "n_heads": [1, 3],
+            "use_layer_norm": [False, True]
+        }
         args.use_skips = True
         args.hidden_multiplier = 4
         args.n_steps = 100
-        blocks = [1, 3, 5]
-        for n_blocks in blocks:
+
+        n_blocks_list = [1, 3, 5]
+        for n_blocks in n_blocks_list:
             args.n_blocks = n_blocks
+            args.lr = get_lr(n_blocks)
             run_single_param_sweeps(args, sweeps)
+    
     else:
+        
         delattr(args, "blocks_analysis")
+        args.lr = get_lr(args.n_blocks)
         args.save_dir = get_save_dir(
             save_dir=args.save_dir,
             n_tasks=args.n_tasks,
