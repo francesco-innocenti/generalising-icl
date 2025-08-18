@@ -156,7 +156,7 @@ def main(
                 )
                 plot_ΔWs_alignment(
                     ΔWs_tokens_alignment_all_tasks.mean(axis=0),
-                    alignment_type="tokens",
+                    alignment_between="tokens",
                     save_path=save_path,
                     title=f"$t = {t}$"
                 )
@@ -170,7 +170,7 @@ def main(
                     )
                     plot_ΔWs_alignment(
                         ΔWs_tokens_alignment,
-                        alignment_type="tokens",
+                        alignment_between="tokens",
                         save_path=save_path,
                         title=f"$t = {t}$"
                     )
@@ -185,7 +185,7 @@ def main(
             )
             plot_ΔWs_alignment(
                 ΔWs_blocks_alignment_all_tasks.mean(axis=0),
-                alignment_type="blocks",
+                alignment_between="blocks",
                 save_path=save_path,
                 title=f"$t = {t}$"
             ) 
@@ -199,7 +199,7 @@ def main(
                 )
                 plot_ΔWs_alignment(
                     ΔWs_blocks_alignment,
-                    alignment_type="blocks",
+                    alignment_between="blocks",
                     save_path=save_path,
                     title=f"$t = {t}$"
                 )   

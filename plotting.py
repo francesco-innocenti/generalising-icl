@@ -45,7 +45,7 @@ def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
     plt.close("all")
 
 
-def plot_ΔWs_alignment(ΔWs_alignment, alignment_type, save_path, title=None):
+def plot_ΔWs_alignment(ΔWs_alignment, alignment_between, save_path, title=None):
     N = len(ΔWs_alignment) - 1
     fig, ax = plt.subplots(figsize=(5, 4), dpi=300)
     im = plt.imshow(
@@ -60,7 +60,7 @@ def plot_ΔWs_alignment(ΔWs_alignment, alignment_type, save_path, title=None):
     cbar.ax.tick_params(labelsize=20)
     cbar.set_label("Directional alignment", fontsize=18)
     
-    if alignment_type == "blocks":
+    if alignment_between == "blocks":
         for i in range(len(ΔWs_alignment)):
             for j in range(len(ΔWs_alignment)):
                 ax.text(
@@ -76,10 +76,10 @@ def plot_ΔWs_alignment(ΔWs_alignment, alignment_type, save_path, title=None):
         ax.set_title(title, fontsize=20, pad=12)
 
     ylabel = "$\Delta W_i(C)$" if (
-        alignment_type == "tokens" 
+        alignment_between == "tokens" 
     ) else "$\Delta W_\ell(C)$"
     xlabel = "$\Delta W_j(C)$" if (
-        alignment_type == "tokens" 
+        alignment_between == "tokens" 
     ) else "$\Delta W_k(C)$"
     ax.set_ylabel(ylabel, fontsize=18)
     ax.set_xlabel(xlabel, fontsize=18)
