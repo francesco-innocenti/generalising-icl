@@ -261,7 +261,7 @@ def main(
     )
     for t in [0, n_steps-1]:
         plot_blocks_update_rank(
-            effective_updates_ranks,
+            updates_ranks,
             t=t,
             save_path=f"{save_dir}/blocks_update_rank_t_{t}.pdf"
         )
