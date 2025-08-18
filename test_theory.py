@@ -16,6 +16,7 @@ from analytical import compute_icl_updates
 from utils import (
     set_seed, 
     get_save_dir,
+    get_lr,
     compute_ΔWs_alignment, 
     compute_effective_update_rank
 )
@@ -306,7 +307,7 @@ if __name__ == "__main__":
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_heads', type=int, default=1)
-    parser.add_argument('--n_blocks', type=int, default=1)
+    parser.add_argument('--n_blocks', type=int, default=5)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--use_layer_norm', type=bool, default=False)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
@@ -316,16 +317,19 @@ if __name__ == "__main__":
                         help="Run parameter sweeps instead of a single experiment")
     args = parser.parse_args()
     
-    # --- one-block model analysis ---
     sweeps = {
-        "n_tasks": [2**i for i in range(14)],
+        "n_tasks": [2**i for i in range(3, 14)],
         "seq_len": [50, 250, 1250],
         "input_dim": [2, 20],
         "n_heads": [1, 3],
         "use_layer_norm": [False, True]
     }
+    args.lr = get_lr(args.n_blocks)
     
     if args.sweep:
+        args.use_skips = True
+        args.hidden_multiplier = 4
+        args.n_steps = 100
         run_single_param_sweeps(args, sweeps)
     else:
         delattr(args, "sweep")
