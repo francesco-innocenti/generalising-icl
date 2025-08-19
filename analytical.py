@@ -12,7 +12,7 @@ def compute_implicit_icl_updates(
         C_x: Array, 
         x: Array, 
         block_idx: int = 0,
-        use_skips: bool = False
+        use_skips: bool = True
     ):
     """Computes implicit in-context learning updates according to 
         
