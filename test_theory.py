@@ -8,7 +8,7 @@ import equinox as eqx
 import optax
 
 from data import generate_linear_tasks
-from analytical import compute_icl_updates
+from analytical import compute_implicit_icl_updates
 from model import (
     Transformer, 
     forward, 
@@ -104,7 +104,7 @@ def main(
             new_C_x_test = all_new_C_x_test[block_idx]
             new_x_test = new_C_x_test[:, -1:]
 
-            ΔWs, Δbs = compute_icl_updates(
+            ΔWs, Δbs = compute_implicit_icl_updates(
                 model=model, 
                 C_x=new_C_x_test, 
                 x=new_x_test,

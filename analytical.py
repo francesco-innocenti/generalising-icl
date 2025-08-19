@@ -7,7 +7,7 @@ Array: TypeAlias = jnp.ndarray
 
 
 @eqx.filter_jit
-def compute_icl_updates(
+def compute_implicit_icl_updates(
         model: eqx.Module, 
         C_x: Array, 
         x: Array, 

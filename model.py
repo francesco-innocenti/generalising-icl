@@ -130,7 +130,7 @@ def train_step(model, opt_state, x, y, optim):
 
 
 @eqx.filter_jit
-def apply_icl_updates(model, ΔW, Δb, block_idx=0):
+def apply_implicit_icl_updates(model, ΔW, Δb, block_idx=0):
     """
     Applies updates to the first MLP layer and second bias of a transformer block.
     """
@@ -205,4 +205,5 @@ def compute_vectorised_theory_preds(base_model, x, ΔWs, Δbs, block_idx):
 
     # we pass apply_icl_updates as an argument to make the function pure 
     # and JIT-compatible
-    return vmap_over_tasks(ΔWs, Δbs, x, base_model, block_idx, apply_icl_updates)
+    return vmap_over_tasks(
+        ΔWs, Δbs, x, base_model, block_idx, apply_implicit_icl_updates)
