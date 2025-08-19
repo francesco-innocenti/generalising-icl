@@ -14,7 +14,7 @@ def compute_implicit_icl_updates(
         block_idx: int = 0,
         use_skips: bool = False
     ):
-    """Computes in-context learning updates according to 
+    """Computes implicit in-context learning updates according to 
         
         ΔW_i(C) = (W * (ΔA_i + Δz_i)) * (A(x) + x)^T / ||A(x) + x||²,
         Δb_i(C) = ΔA_i + Δz_i,
