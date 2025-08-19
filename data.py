@@ -16,13 +16,13 @@ def generate_linear_tasks(
     """Generates linear function tasks for in-context learning.
 
     Args:
-        n_tasks: number of tasks.
-        seq_len: number of context points.
-        dim: dimension of the input space.
-        key: random key for sampling.
+        n_tasks: number of tasks
+        seq_len: number of context points
+        dim: dimension of the input space
+        key: random key for sampling
 
     Returns:   
-        Context inputs (B, N, D) and target outputs (B,).
+        Context inputs (B, N, D) and target outputs (B,)
         
     """
     B, N, D = n_tasks, seq_len, dim
@@ -45,12 +45,12 @@ def create_input_matrix(x: Array, y: Array, x_query: Array) -> Array:
     """Creates the input matrix E_τ as described in https://arxiv.org/abs/2507.16003.
 
     Args:
-        x: context inputs (B, N, D).
-        y: context outputs (B, N).
-        x_query: query input (B, D).
+        x: context inputs (B, N, D)
+        y: context outputs (B, N)
+        x_query: query input (B, D)
 
     Returns: 
-        Input matrix (B, N+1, D+1).
+        Input matrix (B, N+1, D+1)
 
     """
     B = x.shape[0]
