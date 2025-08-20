@@ -148,14 +148,14 @@ def main(
     
             # --- plot alignment between token positions (for all blocks) ---
             t_str = f"{t:04d}"
-            for block in range(n_blocks):
+            for block_idx in range(n_blocks):
                 for task in random_task_idxs:
                     ΔWs_tokens_alignment = compute_ΔWs_alignment(
-                        ΔWs_steps[t, block, task]
+                        ΔWs_steps[t, block_idx, task]
                     )
                     save_path = (
                         f"{alignments_dir}/ΔWs_tokens_alignment_"
-                        f"t_{t_str}_block_{block}_task_{task}.pdf"
+                        f"t_{t_str}_block_{block_idx+1}_task_{task}.pdf"
                     )
                     plot_ΔWs_alignment(
                         ΔWs_tokens_alignment,
@@ -201,6 +201,7 @@ def main(
     
     # --- plotting ---
     metrics = {
+        "train_losses": train_losses,
         "test_losses": test_losses,
         "theory_test_losses": theory_test_losses,
         "ΔWs_frob_norms": ΔWs_frob_norms,
@@ -243,7 +244,7 @@ def run_single_param_sweeps(base_args, sweeps: dict):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', type=str, default="results")
-    parser.add_argument('--seed', type=int, default=53093)
+    parser.add_argument('--seed', type=int, default=28975)  #53093  #91528
     parser.add_argument('--n_tasks', type=int, default=128)
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
@@ -254,7 +255,7 @@ if __name__ == "__main__":
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--lr', type=float, default=1e-1)
-    parser.add_argument('--blocks_analysis', type=bool, default=True)
+    parser.add_argument('--blocks_analysis', type=bool, default=False)
     args = parser.parse_args()
     
     if args.blocks_analysis:
