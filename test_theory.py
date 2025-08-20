@@ -256,7 +256,7 @@ if __name__ == "__main__":
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--lr', type=float, default=1e-1)
-    parser.add_argument('--blocks_analysis', type=bool, default=False)
+    parser.add_argument('--blocks_analysis', type=bool, default=True)
     args = parser.parse_args()
     
     if args.blocks_analysis:
@@ -275,6 +275,7 @@ if __name__ == "__main__":
         n_seeds = 3
         n_blocks_list = [1, 3, 5]
         for seed in range(n_seeds):
+            args.seed = seed
             for n_blocks in n_blocks_list:
                 args.n_blocks = n_blocks
                 args.lr = get_lr(n_blocks)
