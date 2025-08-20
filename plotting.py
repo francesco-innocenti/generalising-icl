@@ -227,7 +227,14 @@ def plot_metrics(metrics, save_dir):
         metrics["train_losses"],
         metrics["test_losses"],
         metrics["theory_test_losses"],
-        f"{save_dir}/test_losses.pdf"
+        f"{save_dir}/all_losses.pdf",
+        show_train_loss=True
+    )
+    plot_losses(
+        metrics["train_losses"],
+        metrics["test_losses"],
+        metrics["theory_test_losses"],
+        f"{save_dir}/empirical_vs_theory_test_losses.pdf"
     )
 
     plot_theory_preds_squared_diffs(
