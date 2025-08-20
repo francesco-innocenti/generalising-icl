@@ -170,7 +170,7 @@ def plot_theory_preds_squared_diffs(theory_preds_squared_diffs, save_path):
     ax.legend(loc="best", fontsize=14)
     ax.set_xlabel("Block", fontsize=18)
     ax.set_ylabel(
-        "$\sum_i (T^\ell_W(C, x)_{(i)} - T^\ell_{W(C), b'(C)}(x))^2$", 
+        "$\sum_i (T^\ell_W(C, x)_{(i)} - T^\ell_{W_i(C), b_i'(C)}(x))^2$", 
         fontsize=18,
         labelpad=10
     )
