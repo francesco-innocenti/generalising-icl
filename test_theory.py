@@ -264,7 +264,7 @@ if __name__ == "__main__":
         sweeps = {
             "n_tasks": [2**i for i in range(4, 13)],
             "seq_len": [50, 100, 1000],
-            "input_dim": [2, 20],
+            "input_dim": [2, 10],
             "n_heads": [1, 3],
             "use_layer_norm": [False, True]
         }
