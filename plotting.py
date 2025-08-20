@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -174,8 +175,10 @@ def plot_theory_preds_squared_diffs(theory_preds_squared_diffs, save_path):
         labelpad=10
     )
 
+    max_val = theory_preds_squared_diffs[steps_to_plot].max()
+    max_pow10 = 10**math.ceil(math.log10(max_val)) 
+    ax.set_yticks(np.linspace(0, max_pow10, 5))
     ax.set_xticks(blocks)
-    ax.set_yticks([0, 1e-9/4, 1e-9/2, 3*1e-9/4, 1e-9])
 
     ax.tick_params(axis="both", which="major", labelsize=16)
     ax.spines["top"].set_visible(False)
