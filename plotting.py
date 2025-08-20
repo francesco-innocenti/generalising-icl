@@ -10,23 +10,38 @@ plt.rcParams.update({
 })
 
 
-def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
-    n_steps = len(empirical_losses)
+def plot_losses(
+        train_losses, 
+        test_losses, 
+        test_theory_losses, 
+        save_path, 
+        show_train_loss=False
+    ):
+    n_steps = len(train_losses)
     steps = [b+1 for b in range(n_steps)]
     
-    fig, ax = plt.subplots(figsize=(5, 3), dpi=300)  # 4, 2
+    fig, ax = plt.subplots(figsize=(5, 3), dpi=300)
+    if show_train_loss:
+        ax.plot(
+            steps, 
+            train_losses, 
+            label="train", 
+            linewidth=1.5,
+            linestyle="-",
+            color="#EF553B"
+        )
     ax.plot(
         steps, 
-        theory_losses, 
-        label="theory", 
+        test_losses, 
+        label="test (theory)", 
         linewidth=3,
         linestyle="--",
         color="black"
     )
     ax.plot(
         steps, 
-        empirical_losses, 
-        label="experiment", 
+        test_theory_losses, 
+        label="test (experiment)", 
         linewidth=1.5,
         linestyle="-",
         color="#636EFA"
@@ -34,7 +49,7 @@ def plot_empirical_vs_theory_losses(empirical_losses, theory_losses, save_path):
     
     ax.legend(loc="best", fontsize=14)
     ax.set_xlabel("Training step", fontsize=18, labelpad=10)
-    ax.set_ylabel("Test loss", fontsize=18, labelpad=10)
+    ax.set_ylabel("Loss", fontsize=18, labelpad=10)
     ax.tick_params(axis="both", labelsize=14)
     plt.grid(True)
 
@@ -169,7 +184,8 @@ def plot_blocks_ΔW_rank(mean_ranks, std_ranks, t, save_path):
 def plot_metrics(metrics, save_dir):
     
     # --- losses ---
-    plot_empirical_vs_theory_losses(
+    plot_losses(
+        metrics["train_losses"],
         metrics["test_losses"],
         metrics["theory_test_losses"],
         f"{save_dir}/test_losses.pdf"
