@@ -204,6 +204,7 @@ def main(
         "train_losses": train_losses,
         "test_losses": test_losses,
         "theory_test_losses": theory_test_losses,
+        "theory_preds_squared_diffs": theory_preds_squared_diffs,
         "ΔWs_frob_norms": ΔWs_frob_norms,
         "ΔWs_spectral_norms": ΔWs_spectral_norms,
         "updates_ranks": updates_ranks
@@ -244,7 +245,7 @@ def run_single_param_sweeps(base_args, sweeps: dict):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', type=str, default="results")
-    parser.add_argument('--seed', type=int, default=28975)  #53093  #91528
+    parser.add_argument('--seed', type=int, default=53093)
     parser.add_argument('--n_tasks', type=int, default=128)
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)

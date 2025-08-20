@@ -149,6 +149,45 @@ def plot_blocks_ΔW_norms(mean_norms, std_norms, norm_type, save_path):
     plt.close("all")
 
 
+def plot_theory_preds_squared_diffs(theory_preds_squared_diffs, save_path):
+    n_steps, n_blocks = theory_preds_squared_diffs.shape
+    steps_to_plot = [0, int((n_steps - 1 ) / 2), n_steps - 1]
+    blocks = [i for i in range(1, n_blocks + 1)]
+
+    fig, ax = plt.subplots(figsize=(4, 5), dpi=300)
+    for t in steps_to_plot:
+        ax.bar(
+            blocks, 
+            theory_preds_squared_diffs[t], 
+            capsize=10, 
+            label=f"t = {t+1}",
+            color="red", 
+            alpha=0.5,
+            edgecolor="black"
+        )
+
+    ax.legend(loc="best", fontsize=14)
+    ax.set_xlabel("Block", fontsize=18)
+    ax.set_ylabel(
+        "$\sum_i (T^\ell_W(C, x)_{(i)} - T^\ell_{W(C), b'(C)}(x))^2$", 
+        fontsize=18,
+        labelpad=10
+    )
+
+    ax.set_xticks(blocks)
+    ax.set_yticks([0, 1e-9/4, 1e-9/2, 3*1e-9/4, 1e-9])
+
+    ax.tick_params(axis="both", which="major", labelsize=16)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    ax.yaxis.grid(True, linestyle="--", linewidth=0.7, alpha=0.7)
+
+    plt.tight_layout()
+    fig.savefig(save_path, bbox_inches="tight")
+    plt.close("all")
+
+
 def plot_blocks_ΔW_rank(mean_ranks, std_ranks, t, save_path):
     n_blocks = mean_ranks.shape[1]
     blocks = [i for i in range(1, n_blocks + 1)]
@@ -190,7 +229,12 @@ def plot_metrics(metrics, save_dir):
         metrics["theory_test_losses"],
         f"{save_dir}/test_losses.pdf"
     )
-    
+
+    plot_theory_preds_squared_diffs(
+        metrics["theory_preds_squared_diffs"], 
+        save_path=f"{save_dir}/theory_preds_squared_diffs.pdf"
+    )
+
     # --- updates' norms ---
     ΔWs_frob_norms = metrics["ΔWs_frob_norms"]
     ΔWs_spectral_norms = metrics["ΔWs_spectral_norms"]
@@ -209,7 +253,7 @@ def plot_metrics(metrics, save_dir):
         save_path=f"{save_dir}/blocks_ΔW_spectral_norms.pdf"
     )
         
-    # --- updates' rank ---
+    # --- updates' rank & theory preds squared diffs ---
     updates_ranks = metrics["updates_ranks"]
     for t in [0, n_steps - 1]:
         plot_blocks_ΔW_rank(
