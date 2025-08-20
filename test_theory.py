@@ -272,11 +272,13 @@ if __name__ == "__main__":
         args.hidden_multiplier = 4
         args.n_steps = 100
 
+        n_seeds = 3
         n_blocks_list = [1, 3, 5]
-        for n_blocks in n_blocks_list:
-            args.n_blocks = n_blocks
-            args.lr = get_lr(n_blocks)
-            run_single_param_sweeps(args, sweeps)
+        for seed in range(n_seeds):
+            for n_blocks in n_blocks_list:
+                args.n_blocks = n_blocks
+                args.lr = get_lr(n_blocks)
+                run_single_param_sweeps(args, sweeps)
     
     else:
         
