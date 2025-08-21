@@ -16,6 +16,7 @@ class TransformerBlock(eqx.Module):
     ln_2: nn.LayerNorm
     use_layer_norm: bool
     use_skips: bool
+    causal_attn: bool
 
     def __init__(
             self,
@@ -25,6 +26,7 @@ class TransformerBlock(eqx.Module):
             key: jr.PRNGKey,
             use_skips: bool = False,
             use_layer_norm: bool = False,
+            causal_attn: bool = True,
             hidden_multiplier: int = 4
         ):
         k1, k2 = jax.random.split(key, 2)
@@ -45,11 +47,19 @@ class TransformerBlock(eqx.Module):
         self.ln_2 = nn.LayerNorm(n_embed)
         self.use_layer_norm = use_layer_norm
         self.use_skips = use_skips
+        self.causal_attn = causal_attn
 
     def attention_layer(self, x):
         if self.use_layer_norm:
             x = jax.vmap(jax.vmap(self.ln_1))(x)
-        return jax.vmap(self.attn)(x, x, x)
+
+        seq_len = x.shape[1]
+        mask = None
+        if self.causal_attn:
+            mask = jnp.tril(jnp.ones((seq_len, seq_len), dtype=bool))
+
+        #return jax.vmap(self.attn)(x, x, x)
+        return jax.vmap(lambda xi: self.attn(xi, xi, xi, mask=mask))(x)
 
     def mlp_layer(self, x):
         if self.use_layer_norm:
@@ -83,6 +93,7 @@ class Transformer(eqx.Module):
         key: jr.PRNGKey,
         use_skips: bool = False,
         use_layer_norm: bool = False,
+        causal_attn: bool = True,
         hidden_multiplier: int = 4
     ):
         keys = jax.random.split(key, n_blocks)
@@ -93,6 +104,7 @@ class Transformer(eqx.Module):
                 key=k,
                 use_skips=use_skips,
                 use_layer_norm=use_layer_norm,
+                causal_attn=causal_attn,
                 hidden_multiplier=hidden_multiplier
             )
             for k in keys

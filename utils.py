@@ -21,6 +21,7 @@ def get_save_dir(
         n_blocks,
         use_skips,
         use_layer_norm,
+        causal_attn,
         hidden_multiplier,
         n_steps,
         lr,
@@ -39,6 +40,7 @@ Starting experiment with config:
     N blocks: {n_blocks}
     Use skips: {use_skips}
     Use layer norm: {use_layer_norm}
+    Causal attention: {causal_attn}
     Hidden multiplier: {hidden_multiplier}
     Training steps: {n_steps}
     Learning rate: {lr}
@@ -55,6 +57,7 @@ Starting experiment with config:
         f"{n_blocks}_blocks",
         "skips" if use_skips else "no_skips",
         "layer_norm" if use_layer_norm else "no_layer_norm",
+        "causal_attn" if causal_attn else "non_causal_attn",
         f"hidden_multiplier_{hidden_multiplier}",
         f"{n_steps}_steps",
         f"lr_{lr}",

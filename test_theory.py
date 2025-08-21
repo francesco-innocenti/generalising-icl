@@ -34,6 +34,7 @@ def main(
         n_blocks: int,
         use_skips: bool,
         use_layer_norm: bool,
+        causal_attn: bool,
         hidden_multiplier: int,
         n_steps: int,
         lr: float,
@@ -57,6 +58,7 @@ def main(
         key=model_key,
         use_skips=use_skips,
         use_layer_norm=use_layer_norm,
+        causal_attn=causal_attn,
         hidden_multiplier=hidden_multiplier
     )
     optim = optax.adam(lr)
@@ -234,6 +236,7 @@ def run_single_param_sweeps(base_args, sweeps: dict):
                 n_blocks=args.n_blocks,
                 use_skips=args.use_skips,
                 use_layer_norm=args.use_layer_norm,
+                causal_attn=args.causal_attn,
                 hidden_multiplier=args.hidden_multiplier,
                 n_steps=args.n_steps,
                 lr=args.lr,
@@ -253,10 +256,11 @@ if __name__ == "__main__":
     parser.add_argument('--n_blocks', type=int, default=5)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--use_layer_norm', type=bool, default=False)
+    parser.add_argument('--causal_attn', type=bool, default=True)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--lr', type=float, default=1e-1)
-    parser.add_argument('--blocks_analysis', type=bool, default=True)
+    parser.add_argument('--blocks_analysis', type=bool, default=False)
     args = parser.parse_args()
     
     if args.blocks_analysis:
@@ -266,7 +270,8 @@ if __name__ == "__main__":
             "seq_len": [50, 100, 1000],
             "input_dim": [2, 10],
             "n_heads": [1, 3],
-            "use_layer_norm": [False, True]
+            "use_layer_norm": [False, True],
+            "causal_attn": [True]  #False
         }
         args.use_skips = True
         args.hidden_multiplier = 4
@@ -294,6 +299,7 @@ if __name__ == "__main__":
             n_blocks=args.n_blocks,
             use_skips=args.use_skips,
             use_layer_norm=args.use_layer_norm,
+            causal_attn=args.causal_attn,
             hidden_multiplier=args.hidden_multiplier,
             n_steps=args.n_steps,
             lr=args.lr,
