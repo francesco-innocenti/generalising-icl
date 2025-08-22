@@ -167,16 +167,18 @@ def plot_theory_preds_squared_diffs(theory_preds_squared_diffs, save_path):
             edgecolor="black"
         )
 
-    ax.legend(loc="best", fontsize=14)
-    ax.set_xlabel("Block", fontsize=18)
-    ax.set_ylabel(
-        "$\sum_i (T^\ell_W(C, x)_{(i)} - T^\ell_{W_i(C), b_i'(C)}(x))^2$", 
-        fontsize=18,
-        labelpad=10
+    ylabel = (
+        r"$\sum_i (\mathbf{T}^\ell_\mathbf{W}(\mathbf{C}, \mathbf{x})_{(i)}"
+        r" - \mathbf{T}^\ell_{\mathbf{W}_i(\mathbf{C}),"
+        r" \mathbf{b}_i'(\mathbf{C})}(\mathbf{x}))^2$"
     )
+    ax.legend(loc="best", fontsize=14)
+    ax.set_xlabel("Block", fontsize=18, labelpad=14)
+    ax.set_ylabel(ylabel, fontsize=18, labelpad=10)
 
     max_val = theory_preds_squared_diffs[steps_to_plot].max()
     max_pow10 = 10**math.ceil(math.log10(max_val)) 
+    ax.yaxis.get_offset_text().set_fontsize(16)
     ax.set_yticks(np.linspace(0, max_pow10, 5))
     ax.set_xticks(blocks)
 
