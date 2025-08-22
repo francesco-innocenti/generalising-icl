@@ -51,8 +51,10 @@ def plot_losses(
     ax.legend(loc="best", fontsize=14)
     ax.set_xlabel("Training step", fontsize=18, labelpad=10)
     ax.set_ylabel("Loss", fontsize=18, labelpad=10)
-    ax.tick_params(axis="both", labelsize=14)
-    plt.grid(True)
+    
+    plt.grid(True, linestyle="--", linewidth=0.7, alpha=0.7)
+    ax.tick_params(axis="both", labelsize=16)
+    ax.locator_params(axis="y", nbins=5)
 
     plt.tight_layout()
     fig.savefig(save_path, bbox_inches="tight")
@@ -155,7 +157,7 @@ def plot_theory_preds_squared_diffs(theory_preds_squared_diffs, save_path):
     steps_to_plot = [0, int((n_steps - 1 ) / 2), n_steps - 1]
     blocks = [i for i in range(1, n_blocks + 1)]
 
-    fig, ax = plt.subplots(figsize=(4, 5), dpi=300)
+    fig, ax = plt.subplots(figsize=(5, 3.2), dpi=300)
     for t in steps_to_plot:
         ax.bar(
             blocks, 
@@ -167,14 +169,9 @@ def plot_theory_preds_squared_diffs(theory_preds_squared_diffs, save_path):
             edgecolor="black"
         )
 
-    ylabel = (
-        r"$\sum_i (\mathbf{T}^\ell_\mathbf{W}(\mathbf{C}, \mathbf{x})_{(i)}"
-        r" - \mathbf{T}^\ell_{\mathbf{W}_i(\mathbf{C}),"
-        r" \mathbf{b}_i'(\mathbf{C})}(\mathbf{x}))^2$"
-    )
     ax.legend(loc="best", fontsize=14)
-    ax.set_xlabel("Block", fontsize=18, labelpad=14)
-    ax.set_ylabel(ylabel, fontsize=18, labelpad=10)
+    ax.set_xlabel("Block", fontsize=18, labelpad=10)
+    ax.set_ylabel("Mean squared diffs.", fontsize=18, labelpad=10)
 
     max_val = theory_preds_squared_diffs[steps_to_plot].max()
     max_pow10 = 10**math.ceil(math.log10(max_val)) 
@@ -183,9 +180,6 @@ def plot_theory_preds_squared_diffs(theory_preds_squared_diffs, save_path):
     ax.set_xticks(blocks)
 
     ax.tick_params(axis="both", which="major", labelsize=16)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-
     ax.yaxis.grid(True, linestyle="--", linewidth=0.7, alpha=0.7)
 
     plt.tight_layout()
