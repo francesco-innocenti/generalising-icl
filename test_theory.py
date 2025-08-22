@@ -188,7 +188,6 @@ def main(
     np.save(f"{save_dir}/theory_test_losses.npy", theory_test_losses)
 
     np.save(f"{save_dir}/theory_preds_squared_diffs.npy", theory_preds_squared_diffs)
-    np.save(f"{save_dir}/ΔWs_steps.npy", ΔWs_steps)
     np.save(f"{save_dir}/updates_ranks.npy", updates_ranks)
     
     # --- compute norms ---
@@ -271,7 +270,7 @@ if __name__ == "__main__":
             "input_dim": [2, 10],
             "n_heads": [1, 3],
             "use_layer_norm": [False, True],
-            "causal_attn": [True]  #False
+            "causal_attn": [True, False]
         }
         args.use_skips = True
         args.hidden_multiplier = 4
