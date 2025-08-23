@@ -48,7 +48,7 @@ def plot_losses(
         color="#636EFA"
     )
     
-    ax.legend(loc="best", fontsize=14)
+    ax.legend(loc="best", fontsize=14 if show_train_loss else 16)
     ax.set_xlabel("Training step", fontsize=18, labelpad=10)
     ax.set_ylabel(
         "Loss" if show_train_loss else "Test loss", 
