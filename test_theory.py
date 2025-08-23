@@ -258,7 +258,7 @@ if __name__ == "__main__":
     parser.add_argument('--causal_attn', type=bool, default=True)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=1e-1)
+    parser.add_argument('--lr', type=float, default=5e-2)
     parser.add_argument('--blocks_analysis', type=bool, default=False)
     args = parser.parse_args()
     
