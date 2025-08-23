@@ -34,7 +34,7 @@ def plot_losses(
     ax.plot(
         steps, 
         test_losses, 
-        label="test (theory)", 
+        label="test (theory)" if show_train_loss else "theory", 
         linewidth=3,
         linestyle="--",
         color="black"
@@ -42,7 +42,7 @@ def plot_losses(
     ax.plot(
         steps, 
         test_theory_losses, 
-        label="test (experiment)", 
+        label="test (experiment)" if show_train_loss else "experiment", 
         linewidth=1.5,
         linestyle="-",
         color="#636EFA"
@@ -50,7 +50,11 @@ def plot_losses(
     
     ax.legend(loc="best", fontsize=14)
     ax.set_xlabel("Training step", fontsize=18, labelpad=10)
-    ax.set_ylabel("Loss", fontsize=18, labelpad=10)
+    ax.set_ylabel(
+        "Loss" if show_train_loss else "Test loss", 
+        fontsize=18, 
+        labelpad=10
+    )
     
     plt.grid(True, linestyle="--", linewidth=0.7, alpha=0.7)
     ax.tick_params(axis="both", labelsize=16)
