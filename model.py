@@ -12,11 +12,11 @@ Array: TypeAlias = jnp.ndarray
 class TransformerBlock(eqx.Module):
     attn: nn.MultiheadAttention
     mlp: nn.MLP
+    use_skips: bool
+    causal_attn: bool
     ln_1: nn.LayerNorm
     ln_2: nn.LayerNorm
     use_layer_norm: bool
-    use_skips: bool
-    causal_attn: bool
 
     def __init__(
             self,
@@ -24,16 +24,16 @@ class TransformerBlock(eqx.Module):
             n_heads: int, 
             *, 
             key: jr.PRNGKey,
-            use_skips: bool = False,
-            use_layer_norm: bool = False,
+            use_skips: bool = True,
             causal_attn: bool = True,
+            use_layer_norm: bool = False,
             hidden_multiplier: int = 4
         ):
         k1, k2 = jax.random.split(key, 2)
         self.attn = nn.MultiheadAttention(
             query_size=n_embed,
             num_heads=n_heads,
-            key=k1,
+            key=k1
         )
         self.mlp = nn.MLP(
             in_size=n_embed,
@@ -43,11 +43,12 @@ class TransformerBlock(eqx.Module):
             activation=jax.nn.gelu,
             key=k2,
         )
+        self.use_skips = use_skips
+        self.causal_attn = causal_attn
+        
         self.ln_1 = nn.LayerNorm(n_embed)
         self.ln_2 = nn.LayerNorm(n_embed)
         self.use_layer_norm = use_layer_norm
-        self.use_skips = use_skips
-        self.causal_attn = causal_attn
 
     def attention_layer(self, x):
         if self.use_layer_norm:
@@ -90,9 +91,9 @@ class Transformer(eqx.Module):
         n_blocks: int,
         *,
         key: jr.PRNGKey,
-        use_skips: bool = False,
-        use_layer_norm: bool = False,
+        use_skips: bool = True,
         causal_attn: bool = True,
+        use_layer_norm: bool = False,
         hidden_multiplier: int = 4
     ):
         keys = jax.random.split(key, n_blocks)
