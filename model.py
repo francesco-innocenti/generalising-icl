@@ -58,7 +58,6 @@ class TransformerBlock(eqx.Module):
         if self.causal_attn:
             mask = jnp.tril(jnp.ones((seq_len, seq_len), dtype=bool))
 
-        #return jax.vmap(self.attn)(x, x, x)
         return jax.vmap(lambda xi: self.attn(xi, xi, xi, mask=mask))(x)
 
     def mlp_layer(self, x):
