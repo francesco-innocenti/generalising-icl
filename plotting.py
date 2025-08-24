@@ -129,7 +129,7 @@ def plot_blocks_ΔW_norms(mean_norms, std_norms, norm_type, save_path):
     steps = [b+1 for b in range(n_steps)]
     y_axis_label = "$||\Delta W(C)_{(N+1)}||_F$" if (
         norm_type == "frob" 
-    ) else "$||\Delta W(C)_{(N+1)}||_2$"
+    ) else "$||\Delta W(C)_{(N)}||_2$"
     
     _, ax = plt.subplots(figsize=(6, 3), dpi=300) 
     for block_idx in range(n_blocks):
