@@ -124,7 +124,7 @@ def main(
                 block_idx=block_idx
             )
             theory_preds_squared_diffs[t, block_idx] = ( 
-                (block_preds[block_idx] - theory_block_preds)**2 ).sum()
+                (block_preds[block_idx] - theory_block_preds)**2 ).mean()
         
         theory_test_loss = 0.5 * jnp.mean(
             (y_test - theory_block_preds[:, -1, -1]) ** 2)
@@ -251,7 +251,7 @@ if __name__ == "__main__":
     parser.add_argument('--n_tasks', type=int, default=128)
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
-    parser.add_argument('--n_heads', type=int, default=1)
+    parser.add_argument('--n_heads', type=int, default=3)
     parser.add_argument('--n_blocks', type=int, default=5)
     parser.add_argument('--use_skips', type=bool, default=True)
     parser.add_argument('--use_layer_norm', type=bool, default=False)
