@@ -21,9 +21,8 @@ def compute_implicit_icl_updates(
     
     where ΔA_i = A(C, x)_i - A(x) and Δz_i = (C, x)_i - x. This is a 
     generalisation of Equation 8 in https://arxiv.org/abs/2507.16003 for all 
-    output tokens, the "correct" type of skip connections for Pre-LN 
-    architectures, and any transformer block. Without skips, the update reduces
-    to
+    token positions beyond the last, any transformer block beyond the first, and
+    more realistic skip connections. Without skips, the update reduces to
 
         ΔW_i(C) = (W * ΔA_i) * A(x)^T / ||A(x)||².
 
