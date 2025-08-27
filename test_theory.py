@@ -111,7 +111,8 @@ def main(
                 C_x=new_C_x_test, 
                 x=new_x_test,
                 block_idx=block_idx,
-                use_skips=use_skips
+                use_skips=use_skips,
+                use_layer_norm=use_layer_norm
             )
             ΔWs_steps[t, block_idx] = ΔWs
             updates_ranks[t, block_idx] = compute_effective_update_rank(ΔWs)
@@ -247,14 +248,14 @@ def run_single_param_sweeps(base_args, sweeps: dict):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', type=str, default="results")
-    parser.add_argument('--seed', type=int, default=53093)
+    parser.add_argument('--seed', type=int, default=7123)
     parser.add_argument('--n_tasks', type=int, default=128)
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_heads', type=int, default=3)
     parser.add_argument('--n_blocks', type=int, default=5)
     parser.add_argument('--use_skips', type=bool, default=True)
-    parser.add_argument('--use_layer_norm', type=bool, default=False)
+    parser.add_argument('--use_layer_norm', type=bool, default=True)
     parser.add_argument('--causal_attn', type=bool, default=True)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
@@ -267,7 +268,7 @@ if __name__ == "__main__":
         sweeps = {
             "n_tasks": [2**i for i in range(4, 13)],
             "seq_len": [50, 100, 1000],
-            "input_dim": [2, 10],
+            "input_dim": [2, 20],
             "n_heads": [1, 3],
             "use_layer_norm": [False, True],
             "causal_attn": [True, False]
@@ -277,14 +278,11 @@ if __name__ == "__main__":
         args.n_steps = 100
 
         n_seeds = 3
-        n_blocks_list = [1, 3, 5]
         for seed in range(n_seeds):
             args.seed = seed
-            for n_blocks in n_blocks_list:
-                args.n_blocks = n_blocks
-                args.lr = get_lr(n_blocks)
-                run_single_param_sweeps(args, sweeps)
-    
+            args.lr = get_lr(args.n_blocks)
+            run_single_param_sweeps(args, sweeps)
+
     else:
         
         delattr(args, "blocks_analysis")
