@@ -9,7 +9,7 @@ import equinox.nn as nn
 Array: TypeAlias = jnp.ndarray
 
 
-class TransformerBlock(eqx.Module):
+class Block(eqx.Module):
     attn: nn.MultiheadAttention
     mlp: nn.MLP
     use_skips: bool
@@ -98,7 +98,7 @@ class Transformer(eqx.Module):
     ):
         keys = jax.random.split(key, n_blocks)
         self.blocks = [
-            TransformerBlock(
+            Block(
                 n_embed=n_embed, 
                 n_heads=n_heads, 
                 key=k,
