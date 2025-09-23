@@ -1,6 +1,6 @@
 # A Simple Generalisation of the Implicit Dynamics of In-Context Learning
 
-Code for the NeurIPS 2025 Workshop paper **A Simple Generalisation of the 
+Code for the NeurIPS 2025 workshop paper **A Simple Generalisation of the 
 Implicit Dynamics of In-Context Learning**. This work is essentially an extension 
 of the recent paper [Learning without training: The implicit dynamics of in-context learning](https://arxiv.org/abs/2507.16003).
 
