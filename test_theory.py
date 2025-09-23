@@ -24,7 +24,7 @@ from utils import (
 )
 from plotting import plot_ΔWs_alignment, plot_metrics
 
-
+ 
 def main(
         seed: jr.PRNGKey,
         n_tasks: int,
@@ -248,27 +248,27 @@ def run_single_param_sweeps(base_args, sweeps: dict):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', type=str, default="results")
-    parser.add_argument('--seed', type=int, default=7123)
+    parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--n_tasks', type=int, default=128)
     parser.add_argument('--seq_len', type=int, default=50)
     parser.add_argument('--input_dim', type=int, default=2)
     parser.add_argument('--n_heads', type=int, default=3)
     parser.add_argument('--n_blocks', type=int, default=5)
     parser.add_argument('--use_skips', type=bool, default=True)
-    parser.add_argument('--use_layer_norm', type=bool, default=True)
+    parser.add_argument('--use_layer_norm', type=bool, default=False)
     parser.add_argument('--causal_attn', type=bool, default=True)
     parser.add_argument('--hidden_multiplier', type=int, default=4)
     parser.add_argument('--n_steps', type=int, default=100)
     parser.add_argument('--lr', type=float, default=5e-2)
-    parser.add_argument('--blocks_analysis', type=bool, default=False)
+    parser.add_argument('--run_sweeps', type=bool, default=True)
     args = parser.parse_args()
     
-    if args.blocks_analysis:
+    if args.run_sweeps:
         
         sweeps = {
             "n_tasks": [2**i for i in range(4, 13)],
-            "seq_len": [50, 100, 1000],
-            "input_dim": [2, 20],
+            "seq_len": [10, 50, 100, 1000],
+            "input_dim": [2, 5, 8],
             "n_heads": [1, 3],
             "use_layer_norm": [False, True],
             "causal_attn": [True, False]
@@ -285,7 +285,7 @@ if __name__ == "__main__":
 
     else:
         
-        delattr(args, "blocks_analysis")
+        delattr(args, "run_sweeps")
         args.lr = get_lr(args.n_blocks)
         args.save_dir = get_save_dir(
             save_dir=args.save_dir,
