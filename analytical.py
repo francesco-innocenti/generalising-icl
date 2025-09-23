@@ -83,10 +83,10 @@ def compute_implicit_icl_updates(
         
         ΔA = A_C_x - A_x
     else: 
-        A_x = A_x_broadcasted + x + Δz if use_skips else A_x_broadcasted
+        A_x = A_x_broadcasted + x if use_skips else A_x_broadcasted
+        ΔA = ΔA + Δz if use_skips else ΔA
 
     # (B, N+1, H, D)
     ΔWs = compute_over_seq(ΔA, A_x)
 
     return ΔWs, Δbs
-  
