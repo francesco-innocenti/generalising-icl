@@ -6,7 +6,7 @@ of the recent paper [Learning without training: The implicit dynamics of in-cont
 
 
 ## 💻 Reproduce results
-Inside a virtual environment, install all the requirements
+Inside a virtual environment, first install all the requirements
 ```
 pip install -r requirements.txt
 ```
